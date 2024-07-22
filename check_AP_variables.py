@@ -25,11 +25,19 @@ else:
 
 # %% Import
 
-# test_run_dir = "/glade/derecho/scratch/samrabin/tests_0718-095838de/SMS_Lm49.f10_f10_mg37.I2000Clm60Fates.derecho_intel.clm-FatesColdAllVarsMonthly.GC.*/run"
-# test_run_dir = "/glade/derecho/scratch/samrabin/tests_0718-130915de/SMS_Lm49.f10_f10_mg37.I2000Clm60Fates.derecho_intel.clm-FatesColdAllVarsMonthly.GC.0718-130915de_int/run"
-test_run_dir = "/glade/derecho/scratch/samrabin/tests_0722-142229de/SMS_Lm49.f10_f10_mg37.I2000Clm60Fates.derecho_intel.clm-FatesColdAllVarsMonthly.GC.0722-142229de/run"
+testset_dir = "tests_0718-095838de"  # Before changes
+testset_dir = "tests_0718-130915de"  # _AP fixes only
+testset_dir = "tests_0722-142229de"  # All fixes
 
-file_list = glob.glob(os.path.join(test_run_dir, "*.clm2.h0.*nc"))
+top_dir = "/glade/derecho/scratch/samrabin"
+test_name = "SMS_Lm49.f10_f10_mg37.I2000Clm60Fates.derecho_intel.clm-FatesColdAllVarsMonthly"
+
+test_run_dir = os.path.join(top_dir, testset_dir, test_name + "*", "run")
+test_run_dir = os.path.join(test_run_dir, "*.clm2.h0.*nc")
+
+file_list = glob.glob(test_run_dir)
+if len(file_list) == 0:
+    raise FileNotFoundError(f"No files found matching {test_run_dir}")
 file_list.sort()
 
 # Only examine the last timestep, for efficiency
