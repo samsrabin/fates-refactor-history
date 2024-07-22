@@ -108,10 +108,9 @@ for i, (perage_var, non_perage_equiv) in enumerate(dict_perage_to_non_equiv.item
     if da.dims != da_ap_wtmean.dims:
         raise RuntimeError(f"Dimensions of da_ap_wtmean ({da_ap_wtmean.dims}) don't match those of da ({da.dims})")
 
-    # Check weighted mean
-    try:
-        xr.testing.assert_allclose(da, da_ap_wtmean)
-    except AssertionError as e:
+    if np.all(np.isclose(da, da_ap_wtmean, equal_nan=True)):
+        print(f"✅ {var_to_print}")
+    else:
         da_diff = da_ap_wtmean - da
         max_abs_diff = np.nanmax(np.abs(da_diff).values)
         max_pct_diff = 100*np.nanmax(np.abs(da_diff/da).values)
@@ -120,8 +119,6 @@ for i, (perage_var, non_perage_equiv) in enumerate(dict_perage_to_non_equiv.item
         print(f"     max rel diff = {max_pct_diff:.1f}%")
         # da_diff.plot()
         # plt.show()
-    else:
-        print(f"✅ {var_to_print}")
 
 print("\n     ".join(["\n🤷 Non-per-age equivalent not in Dataset:"] + nonperage_missing))
 
