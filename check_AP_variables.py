@@ -62,16 +62,17 @@ var_list = [v for v in ds]
 var_list.sort()
 for this_var in var_list:
     match = p.match(this_var)
-    if match is not None:
-        suffix = this_var.split("_")[-1]
-        suffix2 = suffix.replace("AP", "")
-        non_perage_equiv = "_".join(this_var.split("_")[:-1])
-        if suffix2:
-            non_perage_equiv += "_" + suffix2
-        if non_perage_equiv in ds:
-            dict_perage_to_non_equiv[this_var] = non_perage_equiv
-        else:
-            dict_perage_to_non_equiv[this_var] = None
+    if match is None:
+        continue
+    suffix = this_var.split("_")[-1]
+    suffix2 = suffix.replace("AP", "")
+    non_perage_equiv = "_".join(this_var.split("_")[:-1])
+    if suffix2:
+        non_perage_equiv += "_" + suffix2
+    if non_perage_equiv in ds:
+        dict_perage_to_non_equiv[this_var] = non_perage_equiv
+    else:
+        dict_perage_to_non_equiv[this_var] = None
 
 # Analyze
 weights = ds[weightvar].fillna(0)
