@@ -18,7 +18,6 @@ hostname = gethostname()
 if any(x in hostname for x in ["derecho", "casper"]) or "crhtc" in hostname:
     machine = "glade"
     # Only possible because I have export PYTHONPATH=$HOME in my .bash_profile
-    from ctsm_python_gallery_myfork.ctsm_py import utils
     from ctsm_python_gallery_myfork.ctsm_py import fates_xarray_funcs as fates_utils
 else:
     raise NotImplementedError(f"Hostname not recognized: {hostname}")
