@@ -70,15 +70,20 @@ for this_var in var_list:
     if suffix2:
         non_perage_equiv += "_" + suffix2
     if non_perage_equiv in ds:
-        dict_perage_to_non_equiv[this_var] = non_perage_equiv
+        dict_perage_to_non_equiv[this_var] = {
+            "non_perage_equiv": non_perage_equiv,
+        }
     else:
-        dict_perage_to_non_equiv[this_var] = None
+        dict_perage_to_non_equiv[this_var] = {
+            "non_perage_equiv": None,
+        }
 
 # Analyze
 weights = ds[weightvar].fillna(0)
 nonperage_missing = []
 too_many_duplexed = []
-for i, (perage_var, non_perage_equiv) in enumerate(dict_perage_to_non_equiv.items()):
+for perage_var in dict_perage_to_non_equiv.keys():
+    non_perage_equiv = dict_perage_to_non_equiv[perage_var]["non_perage_equiv"]
 
     # Will de-duplexing be needed?
     suffix = perage_var.split("_")[-1]
