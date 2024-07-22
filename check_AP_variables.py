@@ -51,7 +51,9 @@ if weightvar not in ds:
 pattern = "FATES_[A-Z_]+_[A-Z]*AP[A-Z]*"
 p = re.compile(pattern)
 dict_perage_to_non_equiv = {}
-for this_var in ds:
+var_list = [v for v in ds]
+var_list.sort()
+for this_var in var_list:
     match = p.match(this_var)
     if match is not None:
         suffix = this_var.split("_")[-1]
@@ -66,22 +68,31 @@ for this_var in ds:
 
 # Analyze
 weights = ds[weightvar].fillna(0)
+nonperage_missing = []
+too_many_duplexed = []
 for i, (perage_var, non_perage_equiv) in enumerate(dict_perage_to_non_equiv.items()):
+
+    # Will de-duplexing be needed?
+    suffix = perage_var.split("_")[-1]
+    do_deduplex = len(suffix) > 2
+    if do_deduplex:
+        var_to_print = perage_var.replace("AP", "(AP)")
+    else:
+        var_to_print = perage_var.replace("_AP", "(_AP)")
+
     if non_perage_equiv is None:
-        print(f"🤷 {perage_var}: non-per-age equivalent not in Dataset")
+        nonperage_missing.append(var_to_print)
         continue
 
     # Get DataArrays to work with
     da = ds[non_perage_equiv]
     da_ap = ds[perage_var]
-    
+
     # Deduplex, if needed and possible
-    suffix = perage_var.split("_")[-1]
-    do_deduplex = len(suffix) > 2
     if do_deduplex:
         n_duplexed_dims = len(suffix) / 2
         if n_duplexed_dims > 2:
-            print(f"🤷 {perage_var}: can't yet handle more than 2 duplexed dimensions")
+            too_many_duplexed.append(var_to_print)
             continue
         if suffix == "APFC":
             da_ap = fates_utils.agefuel_to_age_by_fuel(perage_var, ds)
@@ -91,22 +102,27 @@ for i, (perage_var, non_perage_equiv) in enumerate(dict_perage_to_non_equiv.item
             da_ap = fates_utils.deduplex(ds, perage_var, "scls", "age")
         else:
             raise NotImplementedError(f"Unrecognized suffix: _{suffix}")
-    # print(f"{perage_var} {da_ap.dims}: {non_perage_equiv} {da.dims}")
 
     # Get weighted mean
     da_ap_wtmean = da_ap.weighted(weights).mean(dim="fates_levage")
     if da.dims != da_ap_wtmean.dims:
         raise RuntimeError(f"Dimensions of da_ap_wtmean ({da_ap_wtmean.dims}) don't match those of da ({da.dims})")
-    
+
     # Check weighted mean
     try:
         xr.testing.assert_allclose(da, da_ap_wtmean)
     except AssertionError as e:
         da_diff = da_ap_wtmean - da
         max_abs_diff = np.nanmax(np.abs(da_diff).values)
-        max_rel_diff = np.nanmax(np.abs(da_diff/da).values)
-        print(f"❌ {perage_var} vs. {non_perage_equiv}: max abs diff = {max_abs_diff:.1e}; max rel diff = {max_rel_diff}")
+        max_pct_diff = 100*np.nanmax(np.abs(da_diff/da).values)
+        print(f"❌ {var_to_print}:")
+        print(f"     max abs diff = {max_abs_diff:.3g}")
+        print(f"     max rel diff = {max_pct_diff:.1f}%")
         # da_diff.plot()
         # plt.show()
     else:
-        print(f"✅ {perage_var} vs. {non_perage_equiv}")
+        print(f"✅ {var_to_print}")
+
+print("\n     ".join(["\n🤷 Non-per-age equivalent not in Dataset:"] + nonperage_missing))
+
+print("\n     ".join([f"\n🤷 Too many (> 2) duplexed dimensions:"] + too_many_duplexed))
