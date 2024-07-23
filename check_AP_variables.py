@@ -25,26 +25,36 @@ else:
 
 # %% Import
 
-testset_dir = "tests_0718-095838de"  # Before changes
-testset_dir = "tests_0718-130915de"  # _AP fixes only
-testset_dir = "tests_0722-142229de"  # All fixes
+set0 = "tests_0718-095838de"  # Before changes
+set1 = "tests_0718-130915de"  # _AP fixes only
+set2 = "tests_0722-142229de"  # All fixes
+
+# testset_dir_list = [set0, set1]
+# testset_dir_list = [set1, set2]
+testset_dir_list = [set0, set2]
 
 top_dir = "/glade/derecho/scratch/samrabin"
 test_name = "SMS_Lm49.f10_f10_mg37.I2000Clm60Fates.derecho_intel.clm-FatesColdAllVarsMonthly"
 
-test_run_dir = os.path.join(top_dir, testset_dir, test_name + "*", "run")
-test_run_dir = os.path.join(test_run_dir, "*.clm2.h0.*nc")
+datasets = []
+comparing_2 = isinstance(testset_dir_list, list) and len(testset_dir_list) > 1
+if comparing_2 and len(testset_dir_list) > 2:
+    raise RuntimeError("Max # runs to compare is 2")
+for testset_dir in testset_dir_list:
+    test_run_dir = os.path.join(top_dir, testset_dir, test_name + "*", "run")
+    test_run_dir = os.path.join(test_run_dir, "*.clm2.h0.*nc")
 
-file_list = glob.glob(test_run_dir)
-if len(file_list) == 0:
-    raise FileNotFoundError(f"No files found matching {test_run_dir}")
-file_list.sort()
+    file_list = glob.glob(test_run_dir)
+    if len(file_list) == 0:
+        raise FileNotFoundError(f"No files found matching {test_run_dir}")
+    file_list.sort()
 
-# Only examine the last timestep, for efficiency
-this_file = file_list[-1]
-ds = xr.open_dataset(this_file)
-if "time" in ds.dims:
-    ds = ds.isel(time=-1)
+    # Only examine the last timestep, for efficiency
+    this_file = file_list[-1]
+    ds = xr.open_dataset(this_file)
+    if "time" in ds.dims:
+        ds = ds.isel(time=-1)
+    datasets.append(ds)
 
 # %% Process
 
@@ -72,6 +82,9 @@ for this_var in var_list:
     if non_perage_equiv in ds:
         dict_perage_to_non_equiv[this_var] = {
             "non_perage_equiv": non_perage_equiv,
+            "isclose": [],
+            "max_abs_diff": [],
+            "max_pct_diff": [],
         }
     else:
         dict_perage_to_non_equiv[this_var] = {
@@ -83,7 +96,8 @@ weights = ds[weightvar].fillna(0)
 nonperage_missing = []
 too_many_duplexed = []
 for perage_var in dict_perage_to_non_equiv.keys():
-    non_perage_equiv = dict_perage_to_non_equiv[perage_var]["non_perage_equiv"]
+    this_dict = dict_perage_to_non_equiv[perage_var]
+    non_perage_equiv = this_dict["non_perage_equiv"]
 
     # Will de-duplexing be needed?
     suffix = perage_var.split("_")[-1]
@@ -97,41 +111,66 @@ for perage_var in dict_perage_to_non_equiv.keys():
         nonperage_missing.append(var_to_print)
         continue
 
-    # Get DataArrays to work with
-    da = ds[non_perage_equiv]
-    da_ap = ds[perage_var]
+    for ds in datasets:
+        # Get DataArrays to work with
+        da = ds[non_perage_equiv]
+        da_ap = ds[perage_var]
 
-    # Deduplex, if needed and possible
-    if do_deduplex:
-        n_duplexed_dims = len(suffix) / 2
-        if n_duplexed_dims > 2:
-            too_many_duplexed.append(var_to_print)
-            continue
-        if suffix == "APFC":
-            da_ap = fates_utils.agefuel_to_age_by_fuel(perage_var, ds)
-        elif suffix == "APPF":
-            da_ap = fates_utils.deduplex(ds, perage_var, "age", "pft")
-        elif suffix == "SZAP":
-            da_ap = fates_utils.deduplex(ds, perage_var, "scls", "age")
-        else:
-            raise NotImplementedError(f"Unrecognized suffix: _{suffix}")
+        # Deduplex, if needed and possible
+        if do_deduplex:
+            n_duplexed_dims = len(suffix) / 2
+            if n_duplexed_dims > 2:
+                too_many_duplexed.append(var_to_print)
+                continue
+            if suffix == "APFC":
+                da_ap = fates_utils.agefuel_to_age_by_fuel(perage_var, ds)
+            elif suffix == "APPF":
+                da_ap = fates_utils.deduplex(ds, perage_var, "age", "pft")
+            elif suffix == "SZAP":
+                da_ap = fates_utils.deduplex(ds, perage_var, "scls", "age")
+            else:
+                raise NotImplementedError(f"Unrecognized suffix: _{suffix}")
 
-    # Get weighted mean
-    da_ap_wtmean = da_ap.weighted(weights).mean(dim="fates_levage")
-    if da.dims != da_ap_wtmean.dims:
-        raise RuntimeError(f"Dimensions of da_ap_wtmean ({da_ap_wtmean.dims}) don't match those of da ({da.dims})")
+        # Get weighted mean
+        da_ap_wtmean = da_ap.weighted(weights).mean(dim="fates_levage")
+        if da.dims != da_ap_wtmean.dims:
+            raise RuntimeError(f"Dimensions of da_ap_wtmean ({da_ap_wtmean.dims}) don't match those of da ({da.dims})")
 
-    if np.all(np.isclose(da, da_ap_wtmean, equal_nan=True)):
-        print(f"✅ {var_to_print}")
-    else:
+        # Test
+        is_close = np.all(np.isclose(da, da_ap_wtmean, equal_nan=True))
+        this_dict["isclose"].append(is_close)
         da_diff = da_ap_wtmean - da
-        max_abs_diff = np.nanmax(np.abs(da_diff).values)
-        max_pct_diff = 100*np.nanmax(np.abs(da_diff/da).values)
-        print(f"❌ {var_to_print}:")
-        print(f"     max abs diff = {max_abs_diff:.3g}")
-        print(f"     max rel diff = {max_pct_diff:.1f}%")
-        # da_diff.plot()
-        # plt.show()
+        this_dict["max_abs_diff"].append(np.nanmax(np.abs(da_diff).values))
+        this_dict["max_pct_diff"].append(100*np.nanmax(np.abs(da_diff/da).values))
+
+    if not comparing_2:
+        raise NotImplementedError("'not comparing_2' not implemented yet")
+    else:
+        if all(this_dict["isclose"]):
+            print(f"✅ → ✅ {var_to_print}")
+        elif not this_dict["isclose"][0] and this_dict["isclose"][1]:
+            print(f"❌ → ✅ {var_to_print}:")
+        elif this_dict["isclose"][0] and not this_dict["isclose"][1]:
+            print(f"✅ → ❌ {var_to_print}:")
+        else:
+            print(f"❌ → ❌ {var_to_print}:")
+
+        if not all(this_dict["isclose"]):
+            max_abs_diff = this_dict["max_abs_diff"]
+            max_pct_diff = this_dict["max_pct_diff"]
+            if max_abs_diff[0] == max_abs_diff[1] and max_pct_diff[0] == max_pct_diff[1]:
+                print(f"     max abs diff = {max_abs_diff[0]:.3g}")
+                print(f"     max rel diff = {max_pct_diff[0]:.1f}%")
+            else:
+                print(f"     max abs diff = {max_abs_diff[0]:.3g} → {max_abs_diff[1]:.3g}")
+                print(f"     max rel diff = {max_pct_diff[0]:.1f}% → {max_pct_diff[1]:.1f}%")
+            # da_diff.plot()
+            # plt.show()
+
+    dict_perage_to_non_equiv[perage_var] = this_dict
+
+# Print
+
 
 print("\n     ".join(["\n🤷 Non-per-age equivalent not in Dataset:"] + nonperage_missing))
 
