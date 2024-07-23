@@ -168,8 +168,6 @@ for perage_var in dict_perage_to_non_equiv.keys():
         else:
             print(f"     max abs diff = {max_abs_diff[0]:.3g} → {max_abs_diff[1]:.3g}")
             print(f"     max rel diff = {max_pct_diff[0]:.1f}% → {max_pct_diff[1]:.1f}%")
-        # da_diff.plot()
-        # plt.show()
 
     dict_perage_to_non_equiv[perage_var] = this_dict
 
