@@ -32,6 +32,7 @@ set2 = "tests_0722-142229de"  # All fixes
 # testset_dir_list = [set0, set1]
 # testset_dir_list = [set1, set2]
 testset_dir_list = [set0, set2]
+# testset_dir_list = set2
 
 top_dir = "/glade/derecho/scratch/samrabin"
 test_name = "SMS_Lm49.f10_f10_mg37.I2000Clm60Fates.derecho_intel.clm-FatesColdAllVarsMonthly"
@@ -40,6 +41,8 @@ datasets = []
 comparing_2 = isinstance(testset_dir_list, list) and len(testset_dir_list) > 1
 if comparing_2 and len(testset_dir_list) > 2:
     raise RuntimeError("Max # runs to compare is 2")
+if not isinstance(testset_dir_list, list):
+    testset_dir_list = [testset_dir_list]
 for testset_dir in testset_dir_list:
     test_run_dir = os.path.join(top_dir, testset_dir, test_name + "*", "run")
     test_run_dir = os.path.join(test_run_dir, "*.clm2.h0.*nc")
@@ -83,6 +86,7 @@ for this_var in var_list:
         dict_perage_to_non_equiv[this_var] = {
             "non_perage_equiv": non_perage_equiv,
             "isclose": [],
+            "isclose_emoji": [],
             "max_abs_diff": [],
             "max_pct_diff": [],
         }
@@ -121,7 +125,7 @@ for perage_var in dict_perage_to_non_equiv.keys():
             n_duplexed_dims = len(suffix) / 2
             if n_duplexed_dims > 2:
                 too_many_duplexed.append(var_to_print)
-                continue
+                break
             if suffix == "APFC":
                 da_ap = fates_utils.agefuel_to_age_by_fuel(perage_var, ds)
             elif suffix == "APPF":
@@ -133,39 +137,38 @@ for perage_var in dict_perage_to_non_equiv.keys():
 
         # Get weighted mean
         da_ap_wtmean = da_ap.weighted(weights).mean(dim="fates_levage")
+        np.all(np.isclose(da, da_ap.mean(dim="fates_levage"), equal_nan=True))
         if da.dims != da_ap_wtmean.dims:
             raise RuntimeError(f"Dimensions of da_ap_wtmean ({da_ap_wtmean.dims}) don't match those of da ({da.dims})")
 
         # Test
         is_close = np.all(np.isclose(da, da_ap_wtmean, equal_nan=True))
         this_dict["isclose"].append(is_close)
+        this_dict["isclose_emoji"].append(✅ if is_close else ❌)
         da_diff = da_ap_wtmean - da
         this_dict["max_abs_diff"].append(np.nanmax(np.abs(da_diff).values))
         this_dict["max_pct_diff"].append(100*np.nanmax(np.abs(da_diff/da).values))
 
-    if not comparing_2:
-        raise NotImplementedError("'not comparing_2' not implemented yet")
-    else:
-        if all(this_dict["isclose"]):
-            print(f"✅ → ✅ {var_to_print}")
-        elif not this_dict["isclose"][0] and this_dict["isclose"][1]:
-            print(f"❌ → ✅ {var_to_print}:")
-        elif this_dict["isclose"][0] and not this_dict["isclose"][1]:
-            print(f"✅ → ❌ {var_to_print}:")
-        else:
-            print(f"❌ → ❌ {var_to_print}:")
+    if too_many_duplexed and too_many_duplexed[-1] == var_to_print:
+        continue
 
-        if not all(this_dict["isclose"]):
-            max_abs_diff = this_dict["max_abs_diff"]
-            max_pct_diff = this_dict["max_pct_diff"]
-            if max_abs_diff[0] == max_abs_diff[1] and max_pct_diff[0] == max_pct_diff[1]:
-                print(f"     max abs diff = {max_abs_diff[0]:.3g}")
-                print(f"     max rel diff = {max_pct_diff[0]:.1f}%")
-            else:
-                print(f"     max abs diff = {max_abs_diff[0]:.3g} → {max_abs_diff[1]:.3g}")
-                print(f"     max rel diff = {max_pct_diff[0]:.1f}% → {max_pct_diff[1]:.1f}%")
-            # da_diff.plot()
-            # plt.show()
+    emojis = " → ".join(this_dict["isclose_emoji"])
+    if all(this_dict["isclose"]):
+        print(f"{emojis} {var_to_print}")
+        continue
+
+    print(f"{emojis} {var_to_print}:")
+    if not all(this_dict["isclose"]):
+        max_abs_diff = this_dict["max_abs_diff"]
+        max_pct_diff = this_dict["max_pct_diff"]
+        if not comparing_2 or (max_abs_diff[0] == max_abs_diff[1] and max_pct_diff[0] == max_pct_diff[1]):
+            print(f"     max abs diff = {max_abs_diff[0]:.3g}")
+            print(f"     max rel diff = {max_pct_diff[0]:.1f}%")
+        else:
+            print(f"     max abs diff = {max_abs_diff[0]:.3g} → {max_abs_diff[1]:.3g}")
+            print(f"     max rel diff = {max_pct_diff[0]:.1f}% → {max_pct_diff[1]:.1f}%")
+        # da_diff.plot()
+        # plt.show()
 
     dict_perage_to_non_equiv[perage_var] = this_dict
 
