@@ -11,6 +11,9 @@ import re
 import matplotlib.pyplot as plt
 import numpy as np
 import xarray as xr
+import matplotlib.pyplot as plt
+import base64
+from io import BytesIO
 
 # What machine are we on?
 from socket import gethostname
@@ -38,12 +41,52 @@ testset_dir_list = [set0, set3]
 top_dir = "/glade/derecho/scratch/samrabin"
 test_name = "SMS_Lm49.f10_f10_mg37.I2000Clm60Fates.derecho_intel.clm-FatesColdAllVarsMonthly"
 
-datasets = []
-comparing_2 = isinstance(testset_dir_list, list) and len(testset_dir_list) > 1
-if comparing_2 and len(testset_dir_list) > 2:
-    raise RuntimeError("Max # runs to compare is 2")
 if not isinstance(testset_dir_list, list):
     testset_dir_list = [testset_dir_list]
+
+logfile = os.path.join(top_dir, ".".join(testset_dir_list + [test_name, "html"]))
+if os.path.exists(logfile):
+    os.remove(logfile)
+print(f"Log file: {logfile}")
+def log_br(logfile, msg):
+    if "img src" not in msg:
+        print(msg.replace("<p>", ""))
+
+    msg += "<br>\n"
+    with open(logfile, "a") as f:
+        f.write(msg)
+
+def log_ul(logfile, title, items):
+    if not items:
+        return
+
+    print("\n     ".join([f"\n{title}"] + items))
+
+    with open(logfile, "a") as f:
+        f.write("<p>\n")
+        f.write(f"{title}:<br>\n")
+        f.write("<ul>\n")
+        for i in items:
+            f.write(f"<li>{i}</li>\n")
+        f.write("</ul>\n")
+
+def log_plot(logfile, log_br):
+    # Convert plot to base64 string
+    buf = BytesIO()
+    plt.gcf().savefig(buf, format='png')
+    buf.seek(0)
+    plot_data = base64.b64encode(buf.read()).decode('utf8')
+    plt.close()
+
+    # Embed plot in HTML log message
+    plot_html = '<p><img src="data:image/png;base64,{}">'.format(plot_data)
+    log_br(logfile, plot_html)
+    buf.close()
+
+datasets = []
+comparing_2 = len(testset_dir_list) > 1
+if comparing_2 and len(testset_dir_list) > 2:
+    raise RuntimeError("Max # runs to compare is 2")
 for testset_dir in testset_dir_list:
     test_run_dir = os.path.join(top_dir, testset_dir, test_name + "*", "run")
     test_run_dir = os.path.join(test_run_dir, "*.clm2.h0.*nc")
@@ -159,15 +202,18 @@ for perage_var in dict_perage_to_non_equiv.keys():
 
     emojis = " → ".join(this_dict["isclose_emoji"])
 
+    with open(logfile, "a") as f:
+        f.write("<hr>\n")
+        f.write(f"<h1>{emojis} {var_to_print}</h1>\n")
     print(f"{emojis} {var_to_print}:")
     max_abs_diff = this_dict["max_abs_diff"]
     max_pct_diff = this_dict["max_pct_diff"]
     if not comparing_2 or (max_abs_diff[0] == max_abs_diff[1] and max_pct_diff[0] == max_pct_diff[1]):
-        print(f"     max abs diff = {max_abs_diff[0]:.3g}")
-        print(f"     max rel diff = {max_pct_diff[0]:.1f}%")
+        log_br(logfile, f"     max abs diff = {max_abs_diff[0]:.3g}")
+        log_br(logfile, f"     max rel diff = {max_pct_diff[0]:.1f}%")
     else:
-        print(f"     max abs diff = {max_abs_diff[0]:.3g} → {max_abs_diff[1]:.3g}")
-        print(f"     max rel diff = {max_pct_diff[0]:.1f}% → {max_pct_diff[1]:.1f}%")
+        log_br(logfile, f"     max abs diff = {max_abs_diff[0]:.3g} → {max_abs_diff[1]:.3g}")
+        log_br(logfile, f"     max rel diff = {max_pct_diff[0]:.1f}% → {max_pct_diff[1]:.1f}%")
 
     # Make boxplots
     boxdatas = []
@@ -183,16 +229,17 @@ for perage_var in dict_perage_to_non_equiv.keys():
             label = str(i)
         emoji = this_dict["isclose_glyph"][i]
         labels.append(f"{label} {emoji}")
-    plt.boxplot(boxdatas, labels=labels)
+    plt.boxplot(boxdatas, tick_labels=labels)
     plt.ylabel(f"discrepancy ({datasets[0][perage_var].attrs['units']})")
     plt.title(var_to_print)
-    plt.show()
+    log_plot(logfile, log_br)
 
     dict_perage_to_non_equiv[perage_var] = this_dict
 
-# Print
+with open(logfile, "a") as f:
+    f.write("<hr>\n")
+    f.write("<h1>Other</h1>\n")
+log_ul(logfile, "🤷 Non-per-age equivalent not in Dataset", nonperage_missing)
+log_ul(logfile, "🤷 Too many (> 2) duplexed dimensions", too_many_duplexed)
 
-
-print("\n     ".join(["\n🤷 Non-per-age equivalent not in Dataset:"] + nonperage_missing))
-
-print("\n     ".join([f"\n🤷 Too many (> 2) duplexed dimensions:"] + too_many_duplexed))
+# %%
