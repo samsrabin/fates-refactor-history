@@ -158,39 +158,35 @@ for perage_var in dict_perage_to_non_equiv.keys():
         continue
 
     emojis = " → ".join(this_dict["isclose_emoji"])
-    if all(this_dict["isclose"]):
-        print(f"{emojis} {var_to_print}")
-        continue
 
     print(f"{emojis} {var_to_print}:")
-    if not all(this_dict["isclose"]):
-        max_abs_diff = this_dict["max_abs_diff"]
-        max_pct_diff = this_dict["max_pct_diff"]
-        if not comparing_2 or (max_abs_diff[0] == max_abs_diff[1] and max_pct_diff[0] == max_pct_diff[1]):
-            print(f"     max abs diff = {max_abs_diff[0]:.3g}")
-            print(f"     max rel diff = {max_pct_diff[0]:.1f}%")
-        else:
-            print(f"     max abs diff = {max_abs_diff[0]:.3g} → {max_abs_diff[1]:.3g}")
-            print(f"     max rel diff = {max_pct_diff[0]:.1f}% → {max_pct_diff[1]:.1f}%")
+    max_abs_diff = this_dict["max_abs_diff"]
+    max_pct_diff = this_dict["max_pct_diff"]
+    if not comparing_2 or (max_abs_diff[0] == max_abs_diff[1] and max_pct_diff[0] == max_pct_diff[1]):
+        print(f"     max abs diff = {max_abs_diff[0]:.3g}")
+        print(f"     max rel diff = {max_pct_diff[0]:.1f}%")
+    else:
+        print(f"     max abs diff = {max_abs_diff[0]:.3g} → {max_abs_diff[1]:.3g}")
+        print(f"     max rel diff = {max_pct_diff[0]:.1f}% → {max_pct_diff[1]:.1f}%")
 
-        # Make boxplots
-        boxdatas = []
-        labels = []
-        for i, da_diff in enumerate(this_dict["da_diffs"]):
-            boxdata = da_diff.values[np.where(np.abs(da_diff) > 0)]
-            boxdatas.append(boxdata)
-            if i==0:
-                label = "before"
-            elif i==1:
-                label = "after"
-            else:
-                label = str(i)
-            emoji = this_dict["isclose_glyph"][i]
-            labels.append(f"{label} {emoji}")
-        plt.boxplot(boxdatas, labels=labels)
-        plt.ylabel(f"discrepancy ({datasets[0][perage_var].attrs['units']})")
-        plt.title(var_to_print)
-        plt.show()
+    # Make boxplots
+    boxdatas = []
+    labels = []
+    for i, da_diff in enumerate(this_dict["da_diffs"]):
+        boxdata = da_diff.values[np.where(np.abs(da_diff) > 0)]
+        boxdatas.append(boxdata)
+        if i==0:
+            label = "before"
+        elif i==1:
+            label = "after"
+        else:
+            label = str(i)
+        emoji = this_dict["isclose_glyph"][i]
+        labels.append(f"{label} {emoji}")
+    plt.boxplot(boxdatas, labels=labels)
+    plt.ylabel(f"discrepancy ({datasets[0][perage_var].attrs['units']})")
+    plt.title(var_to_print)
+    plt.show()
 
     dict_perage_to_non_equiv[perage_var] = this_dict
 
