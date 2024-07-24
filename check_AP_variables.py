@@ -88,8 +88,10 @@ for this_var in var_list:
             "non_perage_equiv": non_perage_equiv,
             "isclose": [],
             "isclose_emoji": [],
+            "isclose_glyph": [],
             "max_abs_diff": [],
             "max_pct_diff": [],
+            "da_diffs": [],
         }
     else:
         dict_perage_to_non_equiv[this_var] = {
@@ -145,8 +147,10 @@ for perage_var in dict_perage_to_non_equiv.keys():
         # Test
         is_close = np.all(np.isclose(da, da_ap_wtmean, equal_nan=True))
         this_dict["isclose"].append(is_close)
-        this_dict["isclose_emoji"].append(✅ if is_close else ❌)
+        this_dict["isclose_emoji"].append("✅" if is_close else "❌")
+        this_dict["isclose_glyph"].append("✓" if is_close else "X")
         da_diff = da_ap_wtmean - da
+        this_dict["da_diffs"].append(da_diff)
         this_dict["max_abs_diff"].append(np.nanmax(np.abs(da_diff).values))
         this_dict["max_pct_diff"].append(100*np.nanmax(np.abs(da_diff/da).values))
 
@@ -168,6 +172,25 @@ for perage_var in dict_perage_to_non_equiv.keys():
         else:
             print(f"     max abs diff = {max_abs_diff[0]:.3g} → {max_abs_diff[1]:.3g}")
             print(f"     max rel diff = {max_pct_diff[0]:.1f}% → {max_pct_diff[1]:.1f}%")
+
+        # Make boxplots
+        boxdatas = []
+        labels = []
+        for i, da_diff in enumerate(this_dict["da_diffs"]):
+            boxdata = da_diff.values[np.where(np.abs(da_diff) > 0)]
+            boxdatas.append(boxdata)
+            if i==0:
+                label = "before"
+            elif i==1:
+                label = "after"
+            else:
+                label = str(i)
+            emoji = this_dict["isclose_glyph"][i]
+            labels.append(f"{label} {emoji}")
+        plt.boxplot(boxdatas, labels=labels)
+        plt.ylabel(f"discrepancy ({datasets[0][perage_var].attrs['units']})")
+        plt.title(var_to_print)
+        plt.show()
 
     dict_perage_to_non_equiv[perage_var] = this_dict
 
