@@ -105,12 +105,6 @@ for testset_dir in testset_dir_list:
 
 # %% Process
 
-weightvar = "FATES_PATCHAREA_AP"
-
-# Check dataset
-if weightvar not in ds:
-    raise RuntimeError(f"This analysis relies on {weightvar}, which is missing from {this_file}")
-
 # Get per-ageclass variables and their equivalents
 pattern = "FATES_[A-Z_]+_[A-Z]*AP[A-Z]*"
 p = re.compile(pattern)
@@ -136,15 +130,19 @@ for this_var in var_list:
             "max_pct_diff": [],
             "da_diffs": [],
         }
+        if this_var in ["FATES_STOMATAL_COND_AP", "FATES_LBLAYER_COND_AP"]:
+            dict_perage_to_non_equiv[this_var]["weights"] = "FATES_CANOPYAREA_AP"
+        else:
+            dict_perage_to_non_equiv[this_var]["weights"] = "FATES_PATCHAREA_AP"
     else:
         dict_perage_to_non_equiv[this_var] = {
             "non_perage_equiv": None,
         }
 
 # Analyze
-weights = ds[weightvar].fillna(0)
 nonperage_missing = []
 too_many_duplexed = []
+weights_var_missing = []
 for perage_var in dict_perage_to_non_equiv.keys():
     this_dict = dict_perage_to_non_equiv[perage_var]
     non_perage_equiv = this_dict["non_perage_equiv"]
@@ -161,10 +159,25 @@ for perage_var in dict_perage_to_non_equiv.keys():
         nonperage_missing.append(var_to_print)
         continue
 
-    for ds in datasets:
+    # Get age weights
+    weightvar = this_dict["weights"]
+    if weightvar not in datasets[0]:
+        print(f"{perage_var}'s weighting variable ({weightvar}) missing; will skip")
+        weights_var_missing.append(f"{var_to_print} (weights: {weightvar})")
+        continue
+
+    for i, ds in enumerate(datasets):
         # Get DataArrays to work with
         da = ds[non_perage_equiv]
         da_ap = ds[perage_var]
+        weights = ds[weightvar]
+        if weightvar == "FATES_CANOPYAREA_AP" and testset_dir_list[i] != "tests_0718-095838de":
+            # Starting with FATES commit 5942a0d (first included in CTSM commit a6ccdf3ec), the
+            # denominator of FATES_CANOPYAREA_AP is age-class area instead of site area. That's
+            # fine for FATES_CANOPYAREA_AP per se, but it means that when you use it as a weight,
+            # you need to multiply it by FATES_PATCHAREA_AP.
+            weights *= ds["FATES_PATCHAREA_AP"]
+        weights = weights.fillna(0)
 
         # Deduplex, if needed and possible
         if do_deduplex:
@@ -241,5 +254,6 @@ with open(logfile, "a") as f:
     f.write("<h1>Other</h1>\n")
 log_ul(logfile, "🤷 Non-per-age equivalent not in Dataset", nonperage_missing)
 log_ul(logfile, "🤷 Too many (> 2) duplexed dimensions", too_many_duplexed)
+log_ul(logfile, "🤷 Weights variable missing", weights_var_missing)
 
 # %%
