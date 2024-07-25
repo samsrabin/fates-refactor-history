@@ -245,7 +245,10 @@ for perage_var in dict_perage_to_non_equiv.keys():
             label = str(i)
         emoji = this_dict["isclose_glyph"][i]
         labels.append(f"{label} {emoji}")
-    plt.boxplot(boxdatas, tick_labels=labels)
+    try:
+        plt.boxplot(boxdatas, tick_labels=labels)
+    except:
+        plt.boxplot(boxdatas, labels=labels)
     plt.ylabel(f"discrepancy ({datasets[0][perage_var].attrs['units']})")
     plt.title(var_to_print)
     log_plot(logfile, log_br)
