@@ -32,11 +32,14 @@ set0 = "tests_0718-095838de"  # Before changes
 set1 = "tests_0718-130915de"  # _AP fixes only
 set2 = "tests_0722-142229de"  # All fixes
 set3 = "tests_0723-141100de"  # 103fdc9 (b4b with above)
+set4 = "tests_0724-101913de"  # a0881c5 (Fix FATES_MORTALITY_CANOPY_SZAP and FATES_MORTALITY_USTORY_SZAP)
+set5 = "tests_0724-125943de"  # a807670c1 (scag_denominator_area needs to be in patchloop)
 
 # testset_dir_list = [set0, set1]
 # testset_dir_list = [set1, set2]
-testset_dir_list = [set0, set3]
-# testset_dir_list = set3
+# testset_dir_list = [set0, set3]
+testset_dir_list = [set0, set5]
+# testset_dir_list = set5
 
 top_dir = "/glade/derecho/scratch/samrabin"
 test_name = "SMS_Lm49.f10_f10_mg37.I2000Clm60Fates.derecho_intel.clm-FatesColdAllVarsMonthly"
