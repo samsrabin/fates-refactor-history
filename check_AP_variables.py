@@ -90,8 +90,36 @@ datasets = []
 comparing_2 = len(testset_dir_list) > 1
 if comparing_2 and len(testset_dir_list) > 2:
     raise RuntimeError("Max # runs to compare is 2")
+
+with open(logfile, "a") as f:
+    if comparing_2:
+        msg = f"<h1>Comparing {testset_dir_list[0]} and {testset_dir_list[1]}</h1>\n"
+    else:
+        msg = f"<h1>{testset_dir_list[0]}</h1>\n"
+    f.write(msg)
+log_br(logfile, f"Test: {test_name} <br>")
+
+def ctsm_sha_to_fates(ctsm_sha):
+    if ctsm_sha == "8e7a1d85f":
+        sha = "fates-ff87ce15"
+    elif ctsm_sha == "a6ccdf3ec":
+        sha = "fates-66cc4f81"
+    elif ctsm_sha == "7680fc6e8":
+        sha = "fates-1ec6d6eb"
+    elif ctsm_sha == "41a4cb47b":
+        sha = "fates-103fdc96"
+    elif ctsm_sha == "fe9ed7376":
+        sha = "fates-a0881c536"
+    elif ctsm_sha == "a807670c1":
+        sha = "fates-f21fa95b"
+    else:
+        print(f"Unable to get FATES SHA for CTSM SHA {ctsm_sha}")
+        sha = "ctsm-" + ctsm_sha
+    return sha
+
 for testset_dir in testset_dir_list:
-    test_run_dir = os.path.join(top_dir, testset_dir, test_name + "*", "run")
+    top_testset_dir = os.path.join(top_dir, testset_dir)
+    test_run_dir = os.path.join(top_testset_dir, test_name + "*", "run")
     test_run_dir = os.path.join(test_run_dir, "*.clm2.h0.*nc")
 
     file_list = glob.glob(test_run_dir)
@@ -105,6 +133,22 @@ for testset_dir in testset_dir_list:
     if "time" in ds.dims:
         ds = ds.isel(time=-1)
     datasets.append(ds)
+
+    # Get SHA
+    srcroot_git_status_file = os.path.join(top_testset_dir, "SRCROOT_GIT_STATUS")
+    this_commit = None
+    sha = None
+    pattern = re.compile("^Current hash:.*$")
+    for i, line in enumerate(open(srcroot_git_status_file)):
+        for match in re.finditer(pattern, line):
+            this_commit = match.group()
+            sha = this_commit.split(" ")[2]
+    ds.attrs["this_commit"] = this_commit.replace("Current hash", "Current CTSM hash")
+    ds.attrs["label"] = ctsm_sha_to_fates(sha)
+    with open(logfile, "a") as f:
+        f.write(f"<h3>{testset_dir}</h3>\n")
+    log_br(logfile, ds.attrs["this_commit"])
+
 
 # %% Process
 
@@ -220,7 +264,7 @@ for perage_var in dict_perage_to_non_equiv.keys():
 
     with open(logfile, "a") as f:
         f.write("<hr>\n")
-        f.write(f"<h1>{emojis} {var_to_print}</h1>\n")
+        f.write(f"<h2>{emojis} {var_to_print}</h2>\n")
     print(f"{emojis} {var_to_print}:")
     max_abs_diff = this_dict["max_abs_diff"]
     max_pct_diff = this_dict["max_pct_diff"]
@@ -237,12 +281,14 @@ for perage_var in dict_perage_to_non_equiv.keys():
     for i, da_diff in enumerate(this_dict["da_diffs"]):
         boxdata = da_diff.values[np.where(np.abs(da_diff) > 0)]
         boxdatas.append(boxdata)
-        if i==0:
-            label = "before"
-        elif i==1:
-            label = "after"
-        else:
-            label = str(i)
+        label = datasets[i].attrs["label"]
+        if label is None:
+            if i==0:
+                label = "before"
+            elif i==1:
+                label = "after"
+            else:
+                label = str(i)
         emoji = this_dict["isclose_glyph"][i]
         labels.append(f"{label} {emoji}")
     try:
@@ -257,7 +303,7 @@ for perage_var in dict_perage_to_non_equiv.keys():
 
 with open(logfile, "a") as f:
     f.write("<hr>\n")
-    f.write("<h1>Other</h1>\n")
+    f.write("<h2>Other</h2>\n")
 log_ul(logfile, "🤷 Non-per-age equivalent not in Dataset", nonperage_missing)
 log_ul(logfile, "🤷 Too many (> 2) duplexed dimensions", too_many_duplexed)
 log_ul(logfile, "🤷 Weights variable missing", weights_var_missing)
