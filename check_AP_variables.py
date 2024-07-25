@@ -7,6 +7,7 @@ version.
 # %% Setup
 import glob
 import os
+import shutil
 import re
 import matplotlib.pyplot as plt
 import numpy as np
@@ -14,6 +15,7 @@ import xarray as xr
 import matplotlib.pyplot as plt
 import base64
 from io import BytesIO
+import subprocess
 
 # What machine are we on?
 from socket import gethostname
@@ -38,11 +40,15 @@ set5 = "tests_0724-125943de"  # a807670c1 (scag_denominator_area needs to be in 
 # testset_dir_list = [set0, set1]
 # testset_dir_list = [set1, set2]
 # testset_dir_list = [set0, set3]
+# testset_dir_list = [set3, set4]
 testset_dir_list = [set0, set5]
 # testset_dir_list = set5
 
 top_dir = "/glade/derecho/scratch/samrabin"
 test_name = "SMS_Lm49.f10_f10_mg37.I2000Clm60Fates.derecho_intel.clm-FatesColdAllVarsMonthly"
+
+publish_dir = "/glade/u/home/samrabin/analysis-outputs/fates-refactor-history"
+url = "https://samsrabin.github.io/analysis-outputs/fates-refactor-history/"
 
 if not isinstance(testset_dir_list, list):
     testset_dir_list = [testset_dir_list]
@@ -308,4 +314,72 @@ log_ul(logfile, "🤷 Non-per-age equivalent not in Dataset", nonperage_missing)
 log_ul(logfile, "🤷 Too many (> 2) duplexed dimensions", too_many_duplexed)
 log_ul(logfile, "🤷 Weights variable missing", weights_var_missing)
 
-# %%
+
+# %% Publish
+
+def run_git_cmd(cmd):
+    try:
+        result = subprocess.check_output(
+            cmd.split(" "),
+            stderr=subprocess.STDOUT,
+            universal_newlines=True,
+        ).splitlines()
+    except subprocess.CalledProcessError as e:
+        print("Command: " + " ".join(e.cmd))
+        print("Message: ", e.stdout)
+        raise e
+    return result
+
+# Ensure publishing dir is clean
+status = run_git_cmd(f"git -C {publish_dir} status")
+if status[-1] != "nothing to commit, working tree clean":
+    raise RuntimeError(f"publish_dir not clean: {publish_dir}")
+
+# Copy to publishing directory
+destfile = os.path.join(publish_dir, os.path.basename(logfile))
+shutil.copyfile(logfile, destfile)
+
+status = run_git_cmd(f"git -C {publish_dir} status")
+modified_files = []
+new_files = []
+in_untracked_files = False
+for l in status:
+    if not in_untracked_files:
+        if re.compile("^\tmodified:").match(l):
+            modified_files.append(l.split(" ")[-1])
+        elif l == "Untracked files:":
+            in_untracked_files = True
+    else:
+        if l == "":
+            break
+        elif l != '  (use "git add <file>..." to include in what will be committed)':
+            new_files.append(l.replace('\t', ''))
+if modified_files:
+    print("Updating files:\n   " + "\n   ".join(modified_files))
+if new_files:
+    print("Adding files:\n   " + "\n   ".join(new_files))
+
+# Commit
+status = run_git_cmd(f"git -C {publish_dir} status")
+if status[-1] != "nothing to commit, working tree clean":
+    # Stage
+    print("Staging...")
+    cmd = f"git -C {publish_dir} add {os.path.join(publish_dir, '*')}"
+    status = run_git_cmd(cmd)
+
+    # Commit
+    print("Committing...")
+    cmd = f"git -C {publish_dir} commit -m Update"
+    status = run_git_cmd(cmd)
+
+    # Push
+    print("Pushing...")
+    cmd = f"git -C {publish_dir} push"
+    status = run_git_cmd(cmd)
+
+    print("Done! Published to:")
+    for f in modified_files + new_files:
+        file_url = url + os.path.basename(f)
+        print("   " + file_url)
+else:
+    print("Nothing to commit")
