@@ -1,3 +1,4 @@
+# %%
 """
 Given the run directory from a FatesColdAllVars(Monthly) test, check the last timestep to see which
 per-ageclass variables have the issue where their weighted sum doesn't equal the non-per-ageclass
@@ -41,7 +42,8 @@ set5 = "tests_0724-125943de"  # a807670c1 (scag_denominator_area needs to be in 
 # testset_dir_list = [set1, set2]
 # testset_dir_list = [set0, set3]
 # testset_dir_list = [set3, set4]
-testset_dir_list = [set0, set5]
+testset_dir_list = [set4, set5]
+# testset_dir_list = [set0, set5]
 # testset_dir_list = set5
 
 top_dir = "/glade/derecho/scratch/samrabin"
@@ -156,7 +158,7 @@ for testset_dir in testset_dir_list:
     log_br(logfile, ds.attrs["this_commit"])
 
 
-# %% Process
+# Process
 
 # Get per-ageclass variables and their equivalents
 pattern = "FATES_[A-Z_]+_[A-Z]*AP[A-Z]*"
@@ -315,7 +317,7 @@ log_ul(logfile, "🤷 Too many (> 2) duplexed dimensions", too_many_duplexed)
 log_ul(logfile, "🤷 Weights variable missing", weights_var_missing)
 
 
-# %% Publish
+# Publish
 
 def run_git_cmd(cmd):
     try:
