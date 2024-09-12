@@ -35,19 +35,24 @@ else:
 
 # %% Import
 
-set0 = "tests_0718-095838de"  # Before changes
+set00 = "tests_0717-152801iz" # Pure baseline
+set0 = "tests_0718-095838de"  # Before substantive changes (CTSM 8e7a1d85, FATES ff87ce15)
 set1 = "tests_0718-130915de"  # _AP fixes only
 set2 = "tests_0722-142229de"  # All fixes
 set3 = "tests_0723-141100de"  # 103fdc9 (b4b with above)
 set4 = "tests_0724-101913de"  # a0881c5 (Fix FATES_MORTALITY_CANOPY_SZAP and FATES_MORTALITY_USTORY_SZAP)
 set5 = "tests_0724-125943de"  # a807670c1 (scag_denominator_area needs to be in patchloop)
+set6 = "tests_0906-171030de"  # Revert my weighting changes (CTSM 6098ae6b1, FATES 91f043a7)
+set7 = "tests_0911-131117de"  # Refactoring and troubleshooting (CTSM c311c24f1, FATES ed7a4e60)
 
 # testset_dir_list = [set0, set1]
 # testset_dir_list = [set1, set2]
 # testset_dir_list = [set0, set3]
 # testset_dir_list = [set3, set4]
 # testset_dir_list = [set4, set5]
-testset_dir_list = [set0, set5]
+# testset_dir_list = [set0, set5]
+testset_dir_list = [set0, set6]
+testset_dir_list = [set00, set7]
 # testset_dir_list = set5
 
 top_dir = "/glade/derecho/scratch/samrabin"
@@ -131,6 +136,7 @@ def ctsm_sha_to_fates(ctsm_sha):
 
 for testset_dir in testset_dir_list:
     top_testset_dir = os.path.join(top_dir, testset_dir)
+    top_testset_dir = os.path.realpath(top_testset_dir)
     test_run_dir = os.path.join(top_testset_dir, test_name + "*", "run")
     test_run_dir = os.path.join(test_run_dir, "*.clm2.h0.*nc")
 
@@ -151,15 +157,20 @@ for testset_dir in testset_dir_list:
     this_commit = None
     sha = None
     pattern = re.compile("^Current hash:.*$")
-    for i, line in enumerate(open(srcroot_git_status_file)):
-        for match in re.finditer(pattern, line):
-            this_commit = match.group()
-            sha = this_commit.split(" ")[2]
-    ds.attrs["this_commit"] = this_commit.replace("Current hash", "Current CTSM hash")
-    ds.attrs["label"] = ctsm_sha_to_fates(sha)
-    with open(logfile, "a") as f:
-        f.write(f"<h3>{testset_dir}</h3>\n")
-    log_br(logfile, ds.attrs["this_commit"])
+    try:
+        for i, line in enumerate(open(srcroot_git_status_file)):
+            for match in re.finditer(pattern, line):
+                this_commit = match.group()
+                sha = this_commit.split(" ")[2]
+        ds.attrs["this_commit"] = this_commit.replace("Current hash", "Current CTSM hash")
+        ds.attrs["label"] = ctsm_sha_to_fates(sha)
+        with open(logfile, "a") as f:
+            f.write(f"<h3>{testset_dir}</h3>\n")
+        log_br(logfile, ds.attrs["this_commit"])
+    except:
+        ds.attrs["this_commit"] = "unknown"
+        ds.attrs["label"] = "unknown"
+        pass
 
 
 # Process
@@ -230,7 +241,7 @@ for perage_var in dict_perage_to_non_equiv.keys():
         da = ds[non_perage_equiv]
         da_ap = ds[perage_var]
         weights = ds[weightvar]
-        if weightvar == "FATES_CANOPYAREA_AP" and testset_dir_list[i] != "tests_0718-095838de":
+        if weightvar == "FATES_CANOPYAREA_AP" and testset_dir_list[i] not in ["tests_0717-152801iz", "tests_0718-095838de"]:
             # Starting with FATES commit 5942a0d (first included in CTSM commit a6ccdf3ec), the
             # denominator of FATES_CANOPYAREA_AP is age-class area instead of site area. That's
             # fine for FATES_CANOPYAREA_AP per se, but it means that when you use it as a weight,
