@@ -59,7 +59,7 @@ url = "https://samsrabin.github.io/analysis-outputs/fates-refactor-history/"
 if not isinstance(testset_dir_list, list):
     testset_dir_list = [testset_dir_list]
 
-logfile = os.path.join(top_dir, ".".join(testset_dir_list + [test_name, "html"]))
+logfile = os.path.join(top_dir, ".".join(["NONwtd"]+ testset_dir_list + [test_name, "html"]))
 if os.path.exists(logfile):
     os.remove(logfile)
 print(f"Log file: {logfile}")
@@ -105,7 +105,7 @@ if comparing_2 and len(testset_dir_list) > 2:
 
 with open(logfile, "a") as f:
     if comparing_2:
-        msg = f"<h1>Comparing {testset_dir_list[0]} and {testset_dir_list[1]}</h1>\n"
+        msg = f"<h1>Comparing NONwtd {testset_dir_list[0]} and {testset_dir_list[1]}</h1>\n"
     else:
         msg = f"<h1>{testset_dir_list[0]}</h1>\n"
     f.write(msg)
@@ -253,18 +253,22 @@ for perage_var in dict_perage_to_non_equiv.keys():
             else:
                 raise NotImplementedError(f"Unrecognized suffix: _{suffix}")
 
+        # Get unweighted sum
+        da_ap_sum = da_ap.sum(dim="fates_levage")
+
         # Get weighted mean
+        # CURRENTLY UNUSED
         da_ap_wtmean = da_ap.weighted(weights).mean(dim="fates_levage")
         np.all(np.isclose(da, da_ap.mean(dim="fates_levage"), equal_nan=True))
         if da.dims != da_ap_wtmean.dims:
             raise RuntimeError(f"Dimensions of da_ap_wtmean ({da_ap_wtmean.dims}) don't match those of da ({da.dims})")
 
         # Test
-        is_close = np.all(np.isclose(da, da_ap_wtmean, equal_nan=True))
+        is_close = np.all(np.isclose(da, da_ap_sum, equal_nan=True))
         this_dict["isclose"].append(is_close)
         this_dict["isclose_emoji"].append("✅" if is_close else "❌")
         this_dict["isclose_glyph"].append("✓" if is_close else "X")
-        da_diff = da_ap_wtmean - da
+        da_diff = da_ap_sum - da
         this_dict["da_diffs"].append(da_diff)
         this_dict["max_abs_diff"].append(np.nanmax(np.abs(da_diff).values))
         this_dict["max_pct_diff"].append(100*np.nanmax(np.abs(da_diff/da).values))
