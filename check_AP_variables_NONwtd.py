@@ -32,6 +32,17 @@ if any(x in hostname for x in ["derecho", "casper"]) or "crhtc" in hostname:
 else:
     raise NotImplementedError(f"Hostname not recognized: {hostname}")
 
+# Non-perage variables that I added to diagnostic purposes
+my_added_diagnostics = [
+    "FATES_CANOPYAREA",
+    "FATES_NCL",
+    "FATES_PATCHAREA",
+    "FATES_SCORCH_HEIGHT_PF",
+    "FATES_SECONDAREA_ANTHRODIST",
+    "FATES_SECONDAREA_DIST",
+    "FATES_ZSTAR"
+]
+
 
 # %% Import
 
@@ -296,6 +307,11 @@ for perage_var in dict_perage_to_non_equiv.keys():
         f.write("<hr>\n")
         f.write(f"<h2>{emojis} {var_to_print}</h2>\n")
     print(f"{emojis} {var_to_print}:")
+
+    # Note non-perage variables that I added for diagnostic purposes
+    if non_perage_equiv in my_added_diagnostics:
+        log_br(logfile, "NOTE: Added by Sam Rabin for diagnostic purposes")
+
     max_abs_diff = this_dict["max_abs_diff"]
     max_pct_diff = this_dict["max_pct_diff"]
     if not comparing_2 or (max_abs_diff[0] == max_abs_diff[1] and max_pct_diff[0] == max_pct_diff[1]):
