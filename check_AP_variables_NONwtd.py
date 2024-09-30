@@ -185,11 +185,14 @@ for this_var in var_list:
     match = p.match(this_var)
     if match is None:
         continue
-    suffix = this_var.split("_")[-1]
-    suffix2 = suffix.replace("AP", "")
-    non_perage_equiv = "_".join(this_var.split("_")[:-1])
-    if suffix2:
-        non_perage_equiv += "_" + suffix2
+    if this_var == "FATES_NPATCH_AP":
+        non_perage_equiv = "FATES_NPATCHES"
+    else:
+        suffix = this_var.split("_")[-1]
+        suffix2 = suffix.replace("AP", "")
+        non_perage_equiv = "_".join(this_var.split("_")[:-1])
+        if suffix2:
+            non_perage_equiv += "_" + suffix2
     if non_perage_equiv in ds:
         dict_perage_to_non_equiv[this_var] = {
             "non_perage_equiv": non_perage_equiv,
