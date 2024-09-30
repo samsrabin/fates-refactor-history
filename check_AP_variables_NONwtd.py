@@ -32,15 +32,25 @@ if any(x in hostname for x in ["derecho", "casper"]) or "crhtc" in hostname:
 else:
     raise NotImplementedError(f"Hostname not recognized: {hostname}")
 
-# Non-perage variables that I added to diagnostic purposes
+# Per-age variables that I added for diagnostic purposes
 my_added_diagnostics = [
+    "FATES_MORTALITY_A_CANOPY_SZAP",
+    "FATES_MORTALITY_A_USTORY_SZAP",
+    "FATES_MORTALITY_B_USTORY_SZAP",
+    "FATES_MORTALITY_C_CANOPY_SZAP",
+    "FATES_MORTALITY_C_USTORY_SZAP",
+    "FATES_MORTALITY_D_CANOPY_SZAP",
+    "FATES_MORTALITY_D_USTORY_SZAP",
+]
+# Non-perage variables that I added for diagnostic purposes
+my_added_diagnostics_nonperage = [
     "FATES_CANOPYAREA",
     "FATES_NCL",
     "FATES_PATCHAREA",
     "FATES_SCORCH_HEIGHT_PF",
     "FATES_SECONDAREA_ANTHRODIST",
     "FATES_SECONDAREA_DIST",
-    "FATES_ZSTAR"
+    "FATES_ZSTAR",
 ]
 
 
@@ -308,9 +318,11 @@ for perage_var in dict_perage_to_non_equiv.keys():
         f.write(f"<h2>{emojis} {var_to_print}</h2>\n")
     print(f"{emojis} {var_to_print}:")
 
-    # Note non-perage variables that I added for diagnostic purposes
-    if non_perage_equiv in my_added_diagnostics:
+    # Note variables that I added for diagnostic purposes
+    if perage_var in my_added_diagnostics:
         log_br(logfile, "NOTE: Added by Sam Rabin for diagnostic purposes")
+    if non_perage_equiv in my_added_diagnostics_nonperage:
+        log_br(logfile, "NOTE: Non-per-age version added by Sam Rabin for diagnostic purposes")
 
     max_abs_diff = this_dict["max_abs_diff"]
     max_pct_diff = this_dict["max_pct_diff"]
