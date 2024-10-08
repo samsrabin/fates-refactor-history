@@ -290,6 +290,8 @@ for perage_var in dict_perage_to_non_equiv.keys():
 
         # Get unweighted sum
         da_ap_sum = da_ap.sum(dim="fates_levage")
+        if da.dims != da_ap_sum.dims:
+            raise RuntimeError(f"Dimensions of da_ap_sum ({da_ap_sum.dims}) don't match those of da ({da.dims})")
 
         # Get weighted mean
         # CURRENTLY UNUSED
