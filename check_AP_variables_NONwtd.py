@@ -294,7 +294,6 @@ for perage_var in dict_perage_to_non_equiv.keys():
         # Get weighted mean
         # CURRENTLY UNUSED
         da_ap_wtmean = da_ap.weighted(weights).mean(dim="fates_levage")
-        np.all(np.isclose(da, da_ap.mean(dim="fates_levage"), equal_nan=True))
         if da.dims != da_ap_wtmean.dims:
             raise RuntimeError(f"Dimensions of da_ap_wtmean ({da_ap_wtmean.dims}) don't match those of da ({da.dims})")
 
