@@ -456,10 +456,12 @@ def get_unweighted_sum(suffix, da, da_ap):
 
 def write_front_matter():
     with open(LOGFILE, "a") as f:
+        a = TESTSET_DIR_BASENAME_LIST[0]
         if COMPARING_2:
-            msg = f"<h1>Comparing NONwtd {TESTSET_DIR_BASENAME_LIST[0]} and {TESTSET_DIR_BASENAME_LIST[1]}</h1>\n"
+            b = TESTSET_DIR_BASENAME_LIST[1]
+            msg = f"<h1>Comparing NONwtd {a} and {b}</h1>\n"
         else:
-            msg = f"<h1>{TESTSET_DIR_BASENAME_LIST[0]}</h1>\n"
+            msg = f"<h1>{a}</h1>\n"
         f.write(msg)
     log_br(f"Test: {TEST_NAME} <br>")
     with open(LOGFILE, "a") as f:
