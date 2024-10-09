@@ -1,14 +1,18 @@
-import glob
+"""
+Useful functions for this module
+"""
+# pylint: disable=invalid-name
+# pylint: disable=missing-function-docstring
+# pylint: disable=too-many-arguments
+
 import os
 import shutil
 import re
-import matplotlib.pyplot as plt
-import numpy as np
-import xarray as xr
-import matplotlib.pyplot as plt
 import base64
 from io import BytesIO
 import subprocess
+import matplotlib.pyplot as plt
+import numpy as np
 
 
 def log_br(logfile, msg):
@@ -35,7 +39,7 @@ def log_ul(logfile, title, items):
         f.write("</ul>\n")
 
 
-def log_plot(logfile, log_br):
+def log_plot(logfile):
     # Convert plot to base64 string
     buf = BytesIO()
     plt.gcf().savefig(buf, format="png")
@@ -85,12 +89,14 @@ def make_boxplots(logfile, datasets, perage_var, this_dict, var_to_print):
         emoji = this_dict["isclose_glyph"][i]
         labels.append(f"{label} {emoji}")
     try:
-        plt.boxplot(boxdatas, tick_labels=labels)
-    except:
+        plt.boxplot(boxdatas, tick_labels=labels)  # pylint: disable=unexpected-keyword-arg
+    except TypeError:
         plt.boxplot(boxdatas, labels=labels)
+    except:  # pylint: disable=try-except-raise
+        raise
     plt.ylabel(f"discrepancy ({datasets[0][perage_var].attrs['units']})")
     plt.title(var_to_print)
-    log_plot(logfile, log_br)
+    log_plot(logfile)
 
 
 def compare_results(this_dict, da, da_ap_sum):
@@ -209,7 +215,7 @@ def publish(publish_dir, url, logfile):
         else:
             if l == "":
                 break
-            elif (
+            if (
                 l != '  (use "git add <file>..." to include in what will be committed)'
             ):
                 new_files.append(l.replace("\t", ""))
@@ -218,7 +224,9 @@ def publish(publish_dir, url, logfile):
     if new_files:
         print("Adding files:\n   " + "\n   ".join(new_files))
 
-    # Commit
+    commit(publish_dir, url, modified_files, new_files)
+
+def commit(publish_dir, url, modified_files, new_files):
     status = run_git_cmd(f"git -C {publish_dir} status")
     if status[-1] != "nothing to commit, working tree clean":
         # Stage

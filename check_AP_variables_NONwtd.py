@@ -1,37 +1,26 @@
 # %%
 """
-Originally copied from check_AP_variables.py at commit a016a65.
-
-That file's description: Given the run directory from a FatesColdAllVars(Monthly) test, check the last timestep to see which
-per-ageclass variables have the issue where their weighted sum doesn't equal the non-per-ageclass version.
-
-This file's description: Given the run directory from a FatesColdAllVars(Monthly) test, check the last timestep to see which
-per-ageclass variables have the issue where their NON-weighted sum doesn't equal the non-per-ageclass version.
+Given the run directory from a FatesColdAllVars(Monthly) test, check the last timestep to see which
+per-ageclass variables have the issue where their NON-weighted sum doesn't equal the
+non-per-ageclass version.
 """
+# pylint: disable=invalid-name
 
 # %% Setup
 import glob
 import os
-import shutil
 import re
-import matplotlib.pyplot as plt
-import numpy as np
+from socket import gethostname
 import xarray as xr
-import matplotlib.pyplot as plt
-import base64
-from io import BytesIO
-import subprocess
 import rfh_utils
 
 # E.g.:
 #    set8 = "tests_1001-170645de"
 #    set14 = "tests_1008-131302de"
 #    testset_dir_list = [set8, set14]
-from test_sets import *  # pylint: disable=wildcard-import
+from test_sets import testset_dir_list
 
 # What machine are we on?
-from socket import gethostname
-
 hostname = gethostname()
 if any(x in hostname for x in ["derecho", "casper"]) or "crhtc" in hostname:
     machine = "glade"
@@ -95,6 +84,7 @@ with open(logfile, "a") as f:
     f.write(msg)
 rfh_utils.log_br(logfile, f"Test: {test_name} <br>")
 with open(logfile, "a") as f:
+    # pylint: disable=line-too-long
     f.write("<b>How to read these plots</b><br>")
     f.write(
         "This webpage compares two runs of the above test, with different code versions noted below. Figures contain one boxplot for each test. The boxplots represent the difference between a per-ageclass variable (e.g., FATES_BURNFRAC_AP)---AFTER summing across the age-class axis---and its non-per-ageclass equivalent (e.g., FATES_BURNFRAC). Each data point in the boxplots represent one member of the non-per-ageclass array in the last saved timestep of the test. So for FATES_BURNFRAC each datapoint is a gridcell, whereas for FATES_VEGC_PF each is a PFT in a gridcell.<br><br>"
@@ -145,8 +135,7 @@ for testset_dir in testset_dir_list:
     except FileNotFoundError:
         ds.attrs["this_commit"] = "unknown"
         ds.attrs["label"] = "unknown"
-        pass
-    except:
+    except:  # pylint: disable=try-except-raise
         raise
 
 
@@ -156,7 +145,7 @@ for testset_dir in testset_dir_list:
 pattern = "FATES_[A-Z_]+_[A-Z]*AP[A-Z]*"
 p = re.compile(pattern)
 dict_perage_to_non_equiv = {}
-var_list = [v for v in ds]
+var_list = list(ds.variables)
 var_list.sort()
 for this_var in var_list:
     match = p.match(this_var)
@@ -193,7 +182,7 @@ for this_var in var_list:
 nonperage_missing = []
 too_many_duplexed = []
 weights_var_missing = []
-for perage_var in dict_perage_to_non_equiv.keys():
+for perage_var in dict_perage_to_non_equiv:
     (
         non_perage_equiv,
         suffix,
@@ -243,6 +232,7 @@ for perage_var in dict_perage_to_non_equiv.keys():
                 da_ap = fates_utils.deduplex(ds, perage_var, "scls", "age")
             elif suffix == "SZAPPF":
                 raise RuntimeError("This requires more testing")
+                # pylint: disable=unreachable
                 da_ap = fates_utils.scappf_to_scls_by_age_by_pft(perage_var, ds)
             else:
                 raise NotImplementedError(f"Unrecognized suffix: _{suffix}")
@@ -251,6 +241,7 @@ for perage_var in dict_perage_to_non_equiv.keys():
         da_ap_sum = da_ap.sum(dim="fates_levage")
         if suffix == "SZAPPF":
             raise RuntimeError("This requires more testing")
+            # pylint: disable=unreachable
             da_ap_sum = da_ap_sum.stack(fates_levscpf=("fates_levscls", "fates_levpft"))
             da_ap_sum = da_ap_sum.transpose("fates_levscpf", "lat", "lon")
         if da.dims != da_ap_sum.dims:
