@@ -136,14 +136,17 @@ def make_boxplots(logfile, datasets, perage_var, this_dict, var_to_print):
 
 
 def compare_results(this_dict, da, da_ap_sum):
+    da_diff = da_ap_sum - da
+    this_dict["da_diffs"].append(da_diff)
+    max_abs_diff = np.nanmax(np.abs(da_diff).values)
+    this_dict["max_abs_diff"].append(max_abs_diff)
+    this_dict["max_pct_diff"].append(100 * np.nanmax(np.abs(da_diff / da).values))
+
     is_close = np.all(np.isclose(da, da_ap_sum, equal_nan=True))
     this_dict["isclose"].append(is_close)
     this_dict["isclose_emoji"].append("✅" if is_close else "❌")
     this_dict["isclose_glyph"].append("✓" if is_close else "X")
-    da_diff = da_ap_sum - da
-    this_dict["da_diffs"].append(da_diff)
-    this_dict["max_abs_diff"].append(np.nanmax(np.abs(da_diff).values))
-    this_dict["max_pct_diff"].append(100 * np.nanmax(np.abs(da_diff / da).values))
+
     this_dict["boxdata"].append(da_diff.values[np.where(np.abs(da_diff) >= 0)])
     return this_dict
 
