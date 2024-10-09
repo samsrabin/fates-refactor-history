@@ -58,6 +58,7 @@ dict_perage_to_non_equiv, missing_var_lists = rfh_utils.get_dict_perage_to_non_e
 nonperage_missing = []
 too_many_duplexed = []
 all_nan = []
+no_boxdata = []
 
 for perage_var in dict_perage_to_non_equiv:
     (
@@ -99,6 +100,9 @@ for perage_var in dict_perage_to_non_equiv:
     if all(np.all(np.isnan(da_diff)) for da_diff in this_dict["da_diffs"]):
         all_nan.append(var_to_print)
         continue
+    if all(len(boxdata) == 0 for boxdata in this_dict["boxdata"]):
+        no_boxdata.append(var_to_print)
+        continue
 
     rfh_utils.add_result_text(
         logfile,
@@ -119,6 +123,6 @@ for perage_var in dict_perage_to_non_equiv:
 #################
 
 rfh_utils.add_end_text(
-    logfile, nonperage_missing, too_many_duplexed, missing_var_lists, all_nan
+    logfile, nonperage_missing, too_many_duplexed, missing_var_lists, all_nan, no_boxdata
 )
 rfh_utils.publish(PUBLISH_DIR, URL, logfile)

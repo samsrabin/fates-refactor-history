@@ -48,6 +48,7 @@ MY_ADDED_DIAGNOSTICS_NONPERAGE = [
     "FATES_ZSTAR",
 ]
 
+
 def log_br(logfile, msg):
     if "img src" not in msg:
         print(msg.replace("<p>", ""))
@@ -108,8 +109,7 @@ def ctsm_sha_to_fates(ctsm_sha):
 def make_boxplots(logfile, datasets, perage_var, this_dict, var_to_print):
     boxdatas = []
     labels = []
-    for i, da_diff in enumerate(this_dict["da_diffs"]):
-        boxdata = da_diff.values[np.where(np.abs(da_diff) > 0)]
+    for i, boxdata in enumerate(this_dict["boxdata"]):
         boxdatas.append(boxdata)
         label = datasets[i].attrs["label"]
         if label is None:
@@ -122,7 +122,10 @@ def make_boxplots(logfile, datasets, perage_var, this_dict, var_to_print):
         emoji = this_dict["isclose_glyph"][i]
         labels.append(f"{label} {emoji}")
     try:
-        plt.boxplot(boxdatas, tick_labels=labels)  # pylint: disable=unexpected-keyword-arg
+        # pylint: disable=unexpected-keyword-arg
+        plt.boxplot(
+            boxdatas, tick_labels=labels
+        )
     except TypeError:
         plt.boxplot(boxdatas, labels=labels)
     except:  # pylint: disable=try-except-raise
@@ -141,6 +144,7 @@ def compare_results(this_dict, da, da_ap_sum):
     this_dict["da_diffs"].append(da_diff)
     this_dict["max_abs_diff"].append(np.nanmax(np.abs(da_diff).values))
     this_dict["max_pct_diff"].append(100 * np.nanmax(np.abs(da_diff / da).values))
+    this_dict["boxdata"].append(da_diff.values[np.where(np.abs(da_diff) > 0)])
     return this_dict
 
 
@@ -200,13 +204,21 @@ def get_variable_info(dict_perage_to_non_equiv, perage_var):
     return non_perage_equiv, suffix, this_dict, do_deduplex, var_to_print
 
 
-def add_end_text(logfile, nonperage_missing, too_many_duplexed, missing_var_lists, all_nan):
+def add_end_text(
+    logfile,
+    nonperage_missing,
+    too_many_duplexed,
+    missing_var_lists,
+    all_nan,
+    no_boxdata,
+):
     with open(logfile, "a") as f:
         f.write("<hr>\n")
         f.write("<h2>Other</h2>\n")
     log_ul(logfile, "🤷 Non-per-age equivalent not in Dataset", nonperage_missing)
     log_ul(logfile, "🤷 Too many (> 2) duplexed dimensions", too_many_duplexed)
     log_ul(logfile, "🤷 All data NaN", all_nan)
+    log_ul(logfile, "🤷 No included data", no_boxdata)
     for i, missing_var_list in enumerate(missing_var_lists):
         if missing_var_list:
             missing_var_list.sort()
@@ -251,9 +263,7 @@ def publish(publish_dir, url, logfile):
         else:
             if l == "":
                 break
-            if (
-                l != '  (use "git add <file>..." to include in what will be committed)'
-            ):
+            if l != '  (use "git add <file>..." to include in what will be committed)':
                 new_files.append(l.replace("\t", ""))
     if modified_files:
         print("Updating files:\n   " + "\n   ".join(modified_files))
@@ -261,6 +271,7 @@ def publish(publish_dir, url, logfile):
         print("Adding files:\n   " + "\n   ".join(new_files))
 
     commit(publish_dir, url, modified_files, new_files)
+
 
 def commit(publish_dir, url, modified_files, new_files):
     status = run_git_cmd(f"git -C {publish_dir} status")
@@ -287,6 +298,7 @@ def commit(publish_dir, url, modified_files, new_files):
     else:
         print("Nothing to commit")
 
+
 def deduplex(ds, suffix, too_many_duplexed, perage_var, var_to_print):
     n_duplexed_dims = len(suffix) / 2
     if n_duplexed_dims > 2:
@@ -300,11 +312,12 @@ def deduplex(ds, suffix, too_many_duplexed, perage_var, var_to_print):
         da_ap = fates_utils.deduplex(ds, perage_var, "scls", "age")
     elif suffix == "SZAPPF":
         raise RuntimeError("This requires more testing")
-                # pylint: disable=unreachable
+        # pylint: disable=unreachable
         da_ap = fates_utils.scappf_to_scls_by_age_by_pft(perage_var, ds)
     else:
         raise NotImplementedError(f"Unrecognized suffix: _{suffix}")
     return da_ap, too_many_duplexed
+
 
 def get_sha(logfile, testset_dir, top_testset_dir, ds):
     srcroot_git_status_file = os.path.join(top_testset_dir, "SRCROOT_GIT_STATUS")
@@ -330,6 +343,7 @@ def get_sha(logfile, testset_dir, top_testset_dir, ds):
         raise
     return ds
 
+
 def get_datasets(testset_dir_list, top_dir, test_name, logfile):
     datasets = []
     for testset_dir in testset_dir_list:
@@ -354,6 +368,7 @@ def get_datasets(testset_dir_list, top_dir, test_name, logfile):
 
         datasets.append(ds)
     return datasets
+
 
 # Get per-ageclass variables and their equivalents
 def get_dict_perage_to_non_equiv(datasets):
@@ -387,38 +402,41 @@ def get_dict_perage_to_non_equiv(datasets):
                 non_perage_equiv += "_" + suffix2
         if all(non_perage_equiv in ds for ds in datasets):
             dict_perage_to_non_equiv[this_var] = {
-            "non_perage_equiv": non_perage_equiv,
-            "isclose": [],
-            "isclose_emoji": [],
-            "isclose_glyph": [],
-            "max_abs_diff": [],
-            "max_pct_diff": [],
-            "da_diffs": [],
-        }
+                "non_perage_equiv": non_perage_equiv,
+                "isclose": [],
+                "isclose_emoji": [],
+                "isclose_glyph": [],
+                "max_abs_diff": [],
+                "max_pct_diff": [],
+                "da_diffs": [],
+                "boxdata": [],
+            }
             if this_var in ["FATES_STOMATAL_COND_AP", "FATES_LBLAYER_COND_AP"]:
                 dict_perage_to_non_equiv[this_var]["weights"] = "FATES_CANOPYAREA_AP"
             else:
                 dict_perage_to_non_equiv[this_var]["weights"] = "FATES_PATCHAREA_AP"
         else:
             dict_perage_to_non_equiv[this_var] = {
-            "non_perage_equiv": None,
-        }
+                "non_perage_equiv": None,
+            }
 
     return dict_perage_to_non_equiv, missing_var_lists
+
 
 def get_unweighted_sum(suffix, da, da_ap):
     da_ap_sum = da_ap.sum(dim="fates_levage")
     if suffix == "SZAPPF":
         raise RuntimeError("This requires more testing")
-            # pylint: disable=unreachable
+        # pylint: disable=unreachable
         da_ap_sum = da_ap_sum.stack(fates_levscpf=("fates_levscls", "fates_levpft"))
         da_ap_sum = da_ap_sum.transpose("fates_levscpf", "lat", "lon")
     if da.dims != da_ap_sum.dims:
         raise RuntimeError(
-                f"Dimensions of da_ap_sum ({da_ap_sum.dims}) don't match those of da ({da.dims})"
-            )
+            f"Dimensions of da_ap_sum ({da_ap_sum.dims}) don't match those of da ({da.dims})"
+        )
 
     return da_ap_sum
+
 
 def write_front_matter(test_name, logfile, comparing_2, testset_dir_list):
     with open(logfile, "a") as f:
@@ -432,11 +450,11 @@ def write_front_matter(test_name, logfile, comparing_2, testset_dir_list):
         # pylint: disable=line-too-long
         f.write("<b>How to read these plots</b><br>")
         f.write(
-        "This webpage compares two runs of the above test, with different code versions noted below. Figures contain one boxplot for each test. The boxplots represent the difference between a per-ageclass variable (e.g., FATES_BURNFRAC_AP)---AFTER summing across the age-class axis---and its non-per-ageclass equivalent (e.g., FATES_BURNFRAC). Each data point in the boxplots represent one member of the non-per-ageclass array in the last saved timestep of the test. So for FATES_BURNFRAC each datapoint is a gridcell, whereas for FATES_VEGC_PF each is a PFT in a gridcell.<br><br>"
-    )
+            "This webpage compares two runs of the above test, with different code versions noted below. Figures contain one boxplot for each test. The boxplots represent the difference between a per-ageclass variable (e.g., FATES_BURNFRAC_AP)---AFTER summing across the age-class axis---and its non-per-ageclass equivalent (e.g., FATES_BURNFRAC). Each data point in the boxplots represent one member of the non-per-ageclass array in the last saved timestep of the test. So for FATES_BURNFRAC each datapoint is a gridcell, whereas for FATES_VEGC_PF each is a PFT in a gridcell.<br><br>"
+        )
         f.write(
-        "If a code version is behaving as expected, ideally all data points should be zero. In practice, because of rounding errors, this can't be achieved. Instead, we expect that the data points should be grouped more or less symmetrically around zero, with small (say, < 1e-10) absolute values.<br><br>"
-    )
+            "If a code version is behaving as expected, ideally all data points should be zero. In practice, because of rounding errors, this can't be achieved. Instead, we expect that the data points should be grouped more or less symmetrically around zero, with small (say, < 1e-10) absolute values.<br><br>"
+        )
         f.write(
-        "Yes, we really want the SUM across the age-class axis to match, even though in most cases what users want of the variable is each age-class's actual value. (If we were saving that, then in order to make the comparison, we would need to take the area-weighted mean across age classes.) We have this behavior because it allows for better preservation of numerical accuracy.<br><br>"
-    )
+            "Yes, we really want the SUM across the age-class axis to match, even though in most cases what users want of the variable is each age-class's actual value. (If we were saving that, then in order to make the comparison, we would need to take the area-weighted mean across age classes.) We have this behavior because it allows for better preservation of numerical accuracy.<br><br>"
+        )
