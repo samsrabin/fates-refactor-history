@@ -12,13 +12,17 @@ Yes, we really want the _sum_ across the age-class axis to match, even though in
 
 There are several options you must set in a file called `options.py`. Here is an example:
 ```python
+# The name of the test you're looking at
 TEST_NAME = (
     "SMS_Lm49.f10_f10_mg37.I2000Clm60Fates.derecho_intel.clm-FatesColdAllVarsMonthly"
 )
-PUBLISH_DIR = "/glade/u/home/samrabin/analysis-outputs/fates-refactor-history"
-THISREPO_URL = "https://github.com/samsrabin/fates-refactor-history"
+
+# The parent directory of each version where that test got saved
 TESTSET_DIR_LIST = [
     "/glade/derecho/scratch/samrabin/tests_1001-170645de",
     "/glade/derecho/scratch/samrabin/tests_1008-131302de",
 ]
+
+# Where the HTML file should be saved
+PUBLISH_DIR = "/glade/u/home/samrabin/analysis-outputs/fates-refactor-history"
 ```

@@ -18,8 +18,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 import xarray as xr
 
-from options import PUBLISH_DIR, TEST_NAME, THISREPO_URL, TESTSET_DIR_LIST
+from options import PUBLISH_DIR, TEST_NAME, TESTSET_DIR_LIST
 import options as other_options
+
+THISREPO_URL = "https://github.com/samsrabin/fates-refactor-history"
 
 # What machine are we on?
 hostname = gethostname()
