@@ -18,16 +18,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import xarray as xr
 
-# E.g.:
-#    TEST_NAME = (
-#        "SMS_Lm49.f10_f10_mg37.I2000Clm60Fates.derecho_intel.clm-FatesColdAllVarsMonthly"
-#    )
-#    PUBLISH_DIR = "/glade/u/home/samrabin/analysis-outputs/fates-refactor-history"
-#    PUBLISH_URL = "https://samsrabin.github.io/analysis-outputs/fates-refactor-history/"
-#    THISREPO_URL = "https://github.com/samsrabin/fates-refactor-history"
-#    set8 = "/glade/derecho/scratch/samrabin/tests_1001-170645de"
-#    set14 = "/glade/derecho/scratch/samrabin/tests_1008-131302de"
-#    TESTSET_DIR_LIST = [set8, set14]
 from options import PUBLISH_DIR, PUBLISH_URL, TEST_NAME, THISREPO_URL, TESTSET_DIR_LIST
 
 # What machine are we on?
