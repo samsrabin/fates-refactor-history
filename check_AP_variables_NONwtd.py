@@ -9,7 +9,6 @@ non-per-ageclass version.
 
 # %% Setup
 import os
-import re
 import rfh_utils
 
 # E.g.:
@@ -86,49 +85,11 @@ with open(logfile, "a") as f:
     )
 
 
+# Get datasets
 datasets = rfh_utils.get_datasets(testset_dir_list, top_dir, test_name, logfile)
 
-
-# Process
-
 # Get per-ageclass variables and their equivalents
-pattern = "FATES_[A-Z_]+_[A-Z]*AP[A-Z]*"
-p = re.compile(pattern)
-dict_perage_to_non_equiv = {}
-ds = datasets[-1]
-var_list = list(ds.variables)
-# TODO: Add comparison of datasets' variable lists
-var_list.sort()
-for this_var in var_list:
-    match = p.match(this_var)
-    if match is None:
-        continue
-    if this_var == "FATES_NPATCH_AP":
-        non_perage_equiv = "FATES_NPATCHES"
-    else:
-        suffix = this_var.split("_")[-1]
-        suffix2 = suffix.replace("AP", "")
-        non_perage_equiv = "_".join(this_var.split("_")[:-1])
-        if suffix2:
-            non_perage_equiv += "_" + suffix2
-    if non_perage_equiv in ds:
-        dict_perage_to_non_equiv[this_var] = {
-            "non_perage_equiv": non_perage_equiv,
-            "isclose": [],
-            "isclose_emoji": [],
-            "isclose_glyph": [],
-            "max_abs_diff": [],
-            "max_pct_diff": [],
-            "da_diffs": [],
-        }
-        if this_var in ["FATES_STOMATAL_COND_AP", "FATES_LBLAYER_COND_AP"]:
-            dict_perage_to_non_equiv[this_var]["weights"] = "FATES_CANOPYAREA_AP"
-        else:
-            dict_perage_to_non_equiv[this_var]["weights"] = "FATES_PATCHAREA_AP"
-    else:
-        dict_perage_to_non_equiv[this_var] = {
-            "non_perage_equiv": None,
-        }
+dict_perage_to_non_equiv = rfh_utils.get_dict_perage_to_non_equiv(datasets)
 
 # Analyze
 nonperage_missing = []
