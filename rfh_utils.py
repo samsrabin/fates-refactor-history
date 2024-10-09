@@ -19,17 +19,16 @@ import numpy as np
 import xarray as xr
 
 # E.g.:
-#    TOP_DIR = "/glade/derecho/scratch/samrabin"
 #    TEST_NAME = (
 #        "SMS_Lm49.f10_f10_mg37.I2000Clm60Fates.derecho_intel.clm-FatesColdAllVarsMonthly"
 #    )
 #    PUBLISH_DIR = "/glade/u/home/samrabin/analysis-outputs/fates-refactor-history"
 #    PUBLISH_URL = "https://samsrabin.github.io/analysis-outputs/fates-refactor-history/"
 #    THISREPO_URL = "https://github.com/samsrabin/fates-refactor-history"
-#    set8 = "tests_1001-170645de"
-#    set14 = "tests_1008-131302de"
+#    set8 = "/glade/derecho/scratch/samrabin/tests_1001-170645de"
+#    set14 = "/glade/derecho/scratch/samrabin/tests_1008-131302de"
 #    TESTSET_DIR_LIST = [set8, set14]
-from options import PUBLISH_DIR, PUBLISH_URL, TOP_DIR, TEST_NAME, THISREPO_URL, TESTSET_DIR_LIST
+from options import PUBLISH_DIR, PUBLISH_URL, TEST_NAME, THISREPO_URL, TESTSET_DIR_LIST
 
 # What machine are we on?
 hostname = gethostname()
@@ -63,16 +62,18 @@ MY_ADDED_DIAGNOSTICS_NONPERAGE = [
 
 if not isinstance(TESTSET_DIR_LIST, list):
     TESTSET_DIR_LIST = [TESTSET_DIR_LIST]
+TESTSET_DIR_BASENAME_LIST = [os.path.basename(x) for x in TESTSET_DIR_LIST]
 
 LOGFILE = os.path.join(
-    PUBLISH_DIR, ".".join(["NONwtd"] + TESTSET_DIR_LIST + [TEST_NAME, "html.tmp"])
+    PUBLISH_DIR, ".".join(["NONwtd"] + TESTSET_DIR_BASENAME_LIST + [TEST_NAME, "html.tmp"])
 )
 if os.path.exists(LOGFILE):
     os.remove(LOGFILE)
 print(f"Log file: {LOGFILE}")
 
-COMPARING_2 = len(TESTSET_DIR_LIST) > 1
-if COMPARING_2 and len(TESTSET_DIR_LIST) > 2:
+N_TESTS = len(TESTSET_DIR_LIST)
+COMPARING_2 = N_TESTS > 1
+if COMPARING_2 and N_TESTS > 2:
     raise RuntimeError("Max # runs to compare is 2")
 
 
@@ -371,8 +372,8 @@ def get_sha(testset_dir, top_testset_dir, ds):
 
 def get_datasets():
     datasets = []
-    for testset_dir in TESTSET_DIR_LIST:
-        top_testset_dir = os.path.join(TOP_DIR, testset_dir)
+    for i, testset_dir in enumerate(TESTSET_DIR_BASENAME_LIST):
+        top_testset_dir = TESTSET_DIR_LIST[i]
         top_testset_dir = os.path.realpath(top_testset_dir)
         test_run_dir = os.path.join(top_testset_dir, TEST_NAME + "*", "run")
         test_run_dir = os.path.join(test_run_dir, "*.clm2.h0.*nc")
@@ -466,9 +467,9 @@ def get_unweighted_sum(suffix, da, da_ap):
 def write_front_matter():
     with open(LOGFILE, "a") as f:
         if COMPARING_2:
-            msg = f"<h1>Comparing NONwtd {TESTSET_DIR_LIST[0]} and {TESTSET_DIR_LIST[1]}</h1>\n"
+            msg = f"<h1>Comparing NONwtd {TESTSET_DIR_BASENAME_LIST[0]} and {TESTSET_DIR_BASENAME_LIST[1]}</h1>\n"
         else:
-            msg = f"<h1>{TESTSET_DIR_LIST[0]}</h1>\n"
+            msg = f"<h1>{TESTSET_DIR_BASENAME_LIST[0]}</h1>\n"
         f.write(msg)
     log_br(f"Test: {TEST_NAME} <br>")
     with open(LOGFILE, "a") as f:
