@@ -18,7 +18,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import xarray as xr
 
-from options import PUBLISH_DIR, PUBLISH_URL, TEST_NAME, THISREPO_URL, TESTSET_DIR_LIST
+from options import PUBLISH_DIR, TEST_NAME, THISREPO_URL, TESTSET_DIR_LIST
+import options as other_options
 
 # What machine are we on?
 hostname = gethostname()
@@ -66,6 +67,61 @@ COMPARING_2 = N_TESTS > 1
 if COMPARING_2 and N_TESTS > 2:
     raise RuntimeError("Max # runs to compare is 2")
 
+try:
+    PUBLISH_URL = other_options.PUBLISH_URL
+except AttributeError:
+    cmd = "git config --get remote.origin.url"
+    cmd_dir = PUBLISH_DIR
+    try:
+        result = subprocess.run(
+            cmd.split(" "),
+            capture_output=True,
+            check=True,
+            cwd=cmd_dir,
+        )
+    except subprocess.CalledProcessError as e:
+        err_msg = f"Command '{cmd}' in dir '{cmd_dir}' failed with exit status {e.returncode}"
+        stderr = e.stderr.decode()
+        if stderr:
+            err_msg += f": {stderr}"
+        raise ChildProcessError(err_msg) from e
+    except:  # pylint: disable=try-except-raise
+        raise
+    publish_repo_url = result.stdout.decode().replace("\n", "")
+    print(f"publish_repo_url: {publish_repo_url}")
+
+    cmd = "git rev-parse --show-toplevel"
+    cmd_dir = PUBLISH_DIR
+    try:
+        result = subprocess.run(
+            cmd.split(" "),
+            capture_output=True,
+            check=True,
+            cwd=cmd_dir,
+        )
+    except subprocess.CalledProcessError as e:
+        err_msg = f"Command '{cmd}' in dir '{cmd_dir}' failed with exit status {e.returncode}"
+        stderr = e.stderr.decode()
+        if stderr:
+            err_msg += f": {stderr}"
+        raise ChildProcessError(err_msg) from e
+    except:  # pylint: disable=try-except-raise
+        raise
+    publish_dir_repo_top = result.stdout.decode().replace("\n", "")
+    subdirs = str(os.path.realpath(PUBLISH_DIR)).replace(publish_dir_repo_top,"")
+
+    if "git@github.com:" in publish_repo_url:
+        gh_user = re.compile(r"git@github.com:(\w+)").findall(publish_repo_url)[0]
+        repo_name = re.compile(r"/(.+).git").findall(publish_repo_url)
+        PUBLISH_URL = (
+            f"https://{gh_user}.github.io/analysis-outputs" + subdirs + "/"
+        )
+    else:
+        raise NotImplementedError(" ".join([  # pylint: disable=raise-missing-from
+            f"Not sure how to handle publish_repo_url {publish_repo_url}.",
+            "Provide PUBLISH_URL in options.py."]))
+except:  # pylint: disable=try-except-raise
+    raise
 
 def log_br(msg):
     if "img src" not in msg:
@@ -242,10 +298,10 @@ def add_end_text(
             log_ul(f"🤷 Missing from Dataset {i+1}/{n_ds}", missing_var_list)
 
 
-def run_git_cmd(cmd):
+def run_git_cmd(git_cmd):
     try:
-        result = subprocess.check_output(
-            cmd.split(" "),
+        git_result = subprocess.check_output(
+            git_cmd.split(" "),
             stderr=subprocess.STDOUT,
             universal_newlines=True,
         ).splitlines()
@@ -253,7 +309,7 @@ def run_git_cmd(cmd):
         print("Command: " + " ".join(e.cmd))
         print("Message: ", e.stdout)
         raise e
-    return result
+    return git_result
 
 
 def publish():
@@ -294,18 +350,18 @@ def commit(modified_files, new_files):
     if status[-1] != "nothing to commit, working tree clean":
         # Stage
         print("Staging...")
-        cmd = f"git -C {PUBLISH_DIR} add {os.path.join(PUBLISH_DIR, '*')}"
-        status = run_git_cmd(cmd)
+        git_cmd = f"git -C {PUBLISH_DIR} add {os.path.join(PUBLISH_DIR, '*')}"
+        status = run_git_cmd(git_cmd)
 
         # Commit
         print("Committing...")
-        cmd = f"git -C {PUBLISH_DIR} commit -m Update"
-        status = run_git_cmd(cmd)
+        git_cmd = f"git -C {PUBLISH_DIR} commit -m Update"
+        status = run_git_cmd(git_cmd)
 
         # Push
         print("Pushing...")
-        cmd = f"git -C {PUBLISH_DIR} push"
-        status = run_git_cmd(cmd)
+        git_cmd = f"git -C {PUBLISH_DIR} push"
+        status = run_git_cmd(git_cmd)
 
         print("Done! Published to:")
         for f in modified_files + new_files:
