@@ -7,6 +7,7 @@ non-per-ageclass version.
 # pylint: disable=fixme
 
 import os
+import numpy as np
 import rfh_utils
 
 # E.g.:
@@ -56,6 +57,7 @@ dict_perage_to_non_equiv, missing_var_lists = rfh_utils.get_dict_perage_to_non_e
 # Analyze
 nonperage_missing = []
 too_many_duplexed = []
+all_nan = []
 
 for perage_var in dict_perage_to_non_equiv:
     (
@@ -93,6 +95,11 @@ for perage_var in dict_perage_to_non_equiv:
     if too_many_duplexed and too_many_duplexed[-1] == var_to_print:
         continue
 
+    # Check for data that won't be plotted
+    if all(np.all(np.isnan(da_diff)) for da_diff in this_dict["da_diffs"]):
+        all_nan.append(var_to_print)
+        continue
+
     rfh_utils.add_result_text(
         logfile,
         comparing_2,
@@ -112,6 +119,6 @@ for perage_var in dict_perage_to_non_equiv:
 #################
 
 rfh_utils.add_end_text(
-    logfile, nonperage_missing, too_many_duplexed, missing_var_lists
+    logfile, nonperage_missing, too_many_duplexed, missing_var_lists, all_nan
 )
 rfh_utils.publish(PUBLISH_DIR, URL, logfile)

@@ -200,12 +200,13 @@ def get_variable_info(dict_perage_to_non_equiv, perage_var):
     return non_perage_equiv, suffix, this_dict, do_deduplex, var_to_print
 
 
-def add_end_text(logfile, nonperage_missing, too_many_duplexed, missing_var_lists):
+def add_end_text(logfile, nonperage_missing, too_many_duplexed, missing_var_lists, all_nan):
     with open(logfile, "a") as f:
         f.write("<hr>\n")
         f.write("<h2>Other</h2>\n")
     log_ul(logfile, "🤷 Non-per-age equivalent not in Dataset", nonperage_missing)
     log_ul(logfile, "🤷 Too many (> 2) duplexed dimensions", too_many_duplexed)
+    log_ul(logfile, "🤷 All data NaN", all_nan)
     for i, missing_var_list in enumerate(missing_var_lists):
         if missing_var_list:
             missing_var_list.sort()
