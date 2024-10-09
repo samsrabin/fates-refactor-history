@@ -302,11 +302,18 @@ for perage_var in dict_perage_to_non_equiv.keys():
                 da_ap = fates_utils.deduplex(ds, perage_var, "age", "pft")
             elif suffix == "SZAP":
                 da_ap = fates_utils.deduplex(ds, perage_var, "scls", "age")
+            elif suffix == "SZAPPF":
+                raise RuntimeError("This requires more testing")
+                da_ap = fates_utils.scappf_to_scls_by_age_by_pft(perage_var, ds)
             else:
                 raise NotImplementedError(f"Unrecognized suffix: _{suffix}")
 
         # Get unweighted sum
         da_ap_sum = da_ap.sum(dim="fates_levage")
+        if suffix == "SZAPPF":
+            raise RuntimeError("This requires more testing")
+            da_ap_sum = da_ap_sum.stack(fates_levscpf=("fates_levscls", "fates_levpft"))
+            da_ap_sum = da_ap_sum.transpose('fates_levscpf', 'lat', 'lon')
         if da.dims != da_ap_sum.dims:
             raise RuntimeError(f"Dimensions of da_ap_sum ({da_ap_sum.dims}) don't match those of da ({da.dims})")
 
