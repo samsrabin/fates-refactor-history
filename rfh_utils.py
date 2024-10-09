@@ -140,9 +140,10 @@ def compare_results(this_dict, da, da_ap_sum):
     this_dict["da_diffs"].append(da_diff)
     max_abs_diff = np.nanmax(np.abs(da_diff).values)
     this_dict["max_abs_diff"].append(max_abs_diff)
-    this_dict["max_pct_diff"].append(100 * np.nanmax(np.abs(da_diff / da).values))
+    max_rel_diff = 100 * np.nanmax(np.abs(da_diff / da).values)
+    this_dict["max_pct_diff"].append(max_rel_diff)
 
-    is_close = np.all(np.isclose(da, da_ap_sum, equal_nan=True))
+    is_close = max_abs_diff < 1e-9 and (max_rel_diff < 1e-6 or np.isnan(max_rel_diff))
     this_dict["isclose"].append(is_close)
     this_dict["isclose_emoji"].append("✅" if is_close else "❌")
     this_dict["isclose_glyph"].append("✓" if is_close else "X")
