@@ -136,6 +136,11 @@ with open(logfile, "a") as f:
         msg = f"<h1>{testset_dir_list[0]}</h1>\n"
     f.write(msg)
 log_br(logfile, f"Test: {test_name} <br>")
+with open(logfile, "a") as f:
+    f.write("<b>How to read these plots</b><br>")
+    f.write("This webpage compares two runs of the above test, with different code versions noted below. Figures contain one boxplot for each test. The boxplots represent the difference between a per-ageclass variable (e.g., FATES_BURNFRAC_AP)---AFTER summing across the age-class axis---and its non-per-ageclass equivalent (e.g., FATES_BURNFRAC). Each data point in the boxplots represent one member of the non-per-ageclass array in the last saved timestep of the test. So for FATES_BURNFRAC each datapoint is a gridcell, whereas for FATES_VEGC_PF each is a PFT in a gridcell.<br><br>")
+    f.write("If a code version is behaving as expected, ideally all data points should be zero. In practice, because of rounding errors, this can't be achieved. Instead, we expect that the data points should be grouped more or less symmetrically around zero, with small (say, < 1e-10) absolute values.<br><br>")
+    f.write("Yes, we really want the SUM across the age-class axis to match, even though in most cases what users want of the variable is each age-class's actual value. (If we were saving that, then in order to make the comparison, we would need to take the area-weighted mean across age classes.) We have this behavior because it allows for better preservation of numerical accuracy.<br><br>")
 
 def ctsm_sha_to_fates(ctsm_sha):
     if ctsm_sha == "8e7a1d85f":
