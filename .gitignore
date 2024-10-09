@@ -1,5 +1,5 @@
 *.swp
 .vscode
 .ipynb_checkpoints/
-test_sets.py
 __pycache__
+options.py

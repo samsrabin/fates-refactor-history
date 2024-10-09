@@ -6,51 +6,21 @@ non-per-ageclass version.
 # pylint: disable=invalid-name
 # pylint: disable=fixme
 
-import os
 import numpy as np
 import rfh_utils
-
-# E.g.:
-#    set8 = "tests_1001-170645de"
-#    set14 = "tests_1008-131302de"
-#    testset_dir_list = [set8, set14]
-from test_sets import testset_dir_list
-
-# Constants
-TOP_DIR = "/glade/derecho/scratch/samrabin"
-TEST_NAME = (
-    "SMS_Lm49.f10_f10_mg37.I2000Clm60Fates.derecho_intel.clm-FatesColdAllVarsMonthly"
-)
-PUBLISH_DIR = "/glade/u/home/samrabin/analysis-outputs/fates-refactor-history"
-PUBLISH_URL = "https://samsrabin.github.io/analysis-outputs/fates-refactor-history/"
-THISREPO_URL = "https://github.com/samsrabin/fates-refactor-history"
 
 #############
 ### Setup ###
 #############
 
-if not isinstance(testset_dir_list, list):
-    testset_dir_list = [testset_dir_list]
-
-logfile = os.path.join(
-    TOP_DIR, ".".join(["NONwtd"] + testset_dir_list + [TEST_NAME, "html"])
-)
-if os.path.exists(logfile):
-    os.remove(logfile)
-print(f"Log file: {logfile}")
-
-comparing_2 = len(testset_dir_list) > 1
-if comparing_2 and len(testset_dir_list) > 2:
-    raise RuntimeError("Max # runs to compare is 2")
-
-rfh_utils.write_front_matter(TEST_NAME, logfile, comparing_2, testset_dir_list, THISREPO_URL)
+rfh_utils.write_front_matter()
 
 ###############
 ### Process ###
 ###############
 
 # Get datasets
-datasets = rfh_utils.get_datasets(testset_dir_list, TOP_DIR, TEST_NAME, logfile)
+datasets = rfh_utils.get_datasets()
 
 # Get per-ageclass variables and their equivalents
 dict_perage_to_non_equiv, missing_var_lists = rfh_utils.get_dict_perage_to_non_equiv(datasets)
@@ -106,8 +76,6 @@ for perage_var in dict_perage_to_non_equiv:
         continue
 
     rfh_utils.add_result_text(
-        logfile,
-        comparing_2,
         non_perage_equiv,
         perage_var,
         this_dict,
@@ -115,7 +83,7 @@ for perage_var in dict_perage_to_non_equiv:
     )
 
     # Make boxplots
-    rfh_utils.make_boxplots(logfile, datasets, perage_var, this_dict, var_to_print)
+    rfh_utils.make_boxplots(datasets, perage_var, this_dict, var_to_print)
 
     dict_perage_to_non_equiv[perage_var] = this_dict
 
@@ -124,6 +92,6 @@ for perage_var in dict_perage_to_non_equiv:
 #################
 
 rfh_utils.add_end_text(
-    logfile, nonperage_missing, too_many_duplexed, missing_var_lists, all_nan, no_boxdata
+    nonperage_missing, too_many_duplexed, missing_var_lists, all_nan, no_boxdata
 )
-rfh_utils.publish(PUBLISH_DIR, PUBLISH_URL, logfile)
+rfh_utils.publish()

@@ -18,6 +18,19 @@ import matplotlib.pyplot as plt
 import numpy as np
 import xarray as xr
 
+# E.g.:
+#    TOP_DIR = "/glade/derecho/scratch/samrabin"
+#    TEST_NAME = (
+#        "SMS_Lm49.f10_f10_mg37.I2000Clm60Fates.derecho_intel.clm-FatesColdAllVarsMonthly"
+#    )
+#    PUBLISH_DIR = "/glade/u/home/samrabin/analysis-outputs/fates-refactor-history"
+#    PUBLISH_URL = "https://samsrabin.github.io/analysis-outputs/fates-refactor-history/"
+#    THISREPO_URL = "https://github.com/samsrabin/fates-refactor-history"
+#    set8 = "tests_1001-170645de"
+#    set14 = "tests_1008-131302de"
+#    TESTSET_DIR_LIST = [set8, set14]
+from options import PUBLISH_DIR, PUBLISH_URL, TOP_DIR, TEST_NAME, THISREPO_URL, TESTSET_DIR_LIST
+
 # What machine are we on?
 hostname = gethostname()
 if any(x in hostname for x in ["derecho", "casper"]) or "crhtc" in hostname:
@@ -48,23 +61,37 @@ MY_ADDED_DIAGNOSTICS_NONPERAGE = [
     "FATES_ZSTAR",
 ]
 
+if not isinstance(TESTSET_DIR_LIST, list):
+    TESTSET_DIR_LIST = [TESTSET_DIR_LIST]
 
-def log_br(logfile, msg):
+LOGFILE = os.path.join(
+    TOP_DIR, ".".join(["NONwtd"] + TESTSET_DIR_LIST + [TEST_NAME, "html"])
+)
+if os.path.exists(LOGFILE):
+    os.remove(LOGFILE)
+print(f"Log file: {LOGFILE}")
+
+COMPARING_2 = len(TESTSET_DIR_LIST) > 1
+if COMPARING_2 and len(TESTSET_DIR_LIST) > 2:
+    raise RuntimeError("Max # runs to compare is 2")
+
+
+def log_br(msg):
     if "img src" not in msg:
         print(msg.replace("<p>", ""))
 
     msg += "<br>\n"
-    with open(logfile, "a") as f:
+    with open(LOGFILE, "a") as f:
         f.write(msg)
 
 
-def log_ul(logfile, title, items):
+def log_ul(title, items):
     if not items:
         return
 
     print("\n     ".join([f"\n{title}"] + items))
 
-    with open(logfile, "a") as f:
+    with open(LOGFILE, "a") as f:
         f.write("<p>\n")
         f.write(f"{title}:<br>\n")
         f.write("<ul>\n")
@@ -73,7 +100,7 @@ def log_ul(logfile, title, items):
         f.write("</ul>\n")
 
 
-def log_plot(logfile):
+def log_plot():
     # Convert plot to base64 string
     buf = BytesIO()
     plt.gcf().savefig(buf, format="png")
@@ -83,7 +110,7 @@ def log_plot(logfile):
 
     # Embed plot in HTML log message
     plot_html = '<p><img src="data:image/png;base64,{}">'.format(plot_data)
-    log_br(logfile, plot_html)
+    log_br(plot_html)
     buf.close()
 
 
@@ -106,7 +133,7 @@ def ctsm_sha_to_fates(ctsm_sha):
     return sha
 
 
-def make_boxplots(logfile, datasets, perage_var, this_dict, var_to_print):
+def make_boxplots(datasets, perage_var, this_dict, var_to_print):
     boxdatas = []
     labels = []
     for i, boxdata in enumerate(this_dict["boxdata"]):
@@ -132,7 +159,7 @@ def make_boxplots(logfile, datasets, perage_var, this_dict, var_to_print):
         raise
     plt.ylabel(f"discrepancy ({datasets[0][perage_var].attrs['units']})")
     plt.title(var_to_print)
-    log_plot(logfile)
+    log_plot()
 
 
 def compare_results(this_dict, da, da_ap_sum):
@@ -153,8 +180,6 @@ def compare_results(this_dict, da, da_ap_sum):
 
 
 def add_result_text(
-    logfile,
-    comparing_2,
     non_perage_equiv,
     perage_var,
     this_dict,
@@ -162,34 +187,31 @@ def add_result_text(
 ):
     emojis = " → ".join(this_dict["isclose_emoji"])
 
-    with open(logfile, "a") as f:
+    with open(LOGFILE, "a") as f:
         f.write("<hr>\n")
         f.write(f"<h2>{emojis} {var_to_print}</h2>\n")
     print(f"{emojis} {var_to_print}:")
 
     # Note variables that I added for diagnostic purposes
     if perage_var in MY_ADDED_DIAGNOSTICS:
-        log_br(logfile, "NOTE: Added by Sam Rabin for diagnostic purposes")
+        log_br("NOTE: Added by Sam Rabin for diagnostic purposes")
     if non_perage_equiv in MY_ADDED_DIAGNOSTICS_NONPERAGE:
         log_br(
-            logfile,
             "NOTE: Non-per-age version added by Sam Rabin for diagnostic purposes",
         )
 
     max_abs_diff = this_dict["max_abs_diff"]
     max_pct_diff = this_dict["max_pct_diff"]
-    if not comparing_2 or (
+    if not COMPARING_2 or (
         max_abs_diff[0] == max_abs_diff[1] and max_pct_diff[0] == max_pct_diff[1]
     ):
-        log_br(logfile, f"     max abs diff = {max_abs_diff[0]:.3g}")
-        log_br(logfile, f"     max rel diff = {max_pct_diff[0]:.1f}%")
+        log_br(f"     max abs diff = {max_abs_diff[0]:.3g}")
+        log_br(f"     max rel diff = {max_pct_diff[0]:.1f}%")
     else:
         log_br(
-            logfile,
             f"     max abs diff = {max_abs_diff[0]:.3g} → {max_abs_diff[1]:.3g}",
         )
         log_br(
-            logfile,
             f"     max rel diff = {max_pct_diff[0]:.1f}% → {max_pct_diff[1]:.1f}%",
         )
 
@@ -209,25 +231,24 @@ def get_variable_info(dict_perage_to_non_equiv, perage_var):
 
 
 def add_end_text(
-    logfile,
     nonperage_missing,
     too_many_duplexed,
     missing_var_lists,
     all_nan,
     no_boxdata,
 ):
-    with open(logfile, "a") as f:
+    with open(LOGFILE, "a") as f:
         f.write("<hr>\n")
         f.write("<h2>Other</h2>\n")
-    log_ul(logfile, "🤷 Non-per-age equivalent not in Dataset", nonperage_missing)
-    log_ul(logfile, "🤷 Too many (> 2) duplexed dimensions", too_many_duplexed)
-    log_ul(logfile, "🤷 All data NaN", all_nan)
-    log_ul(logfile, "🤷 No included data", no_boxdata)
+    log_ul("🤷 Non-per-age equivalent not in Dataset", nonperage_missing)
+    log_ul("🤷 Too many (> 2) duplexed dimensions", too_many_duplexed)
+    log_ul("🤷 All data NaN", all_nan)
+    log_ul("🤷 No included data", no_boxdata)
     for i, missing_var_list in enumerate(missing_var_lists):
         if missing_var_list:
             missing_var_list.sort()
             n_ds = len(missing_var_lists)
-            log_ul(logfile, f"🤷 Missing from Dataset {i+1}/{n_ds}", missing_var_list)
+            log_ul(f"🤷 Missing from Dataset {i+1}/{n_ds}", missing_var_list)
 
 
 def run_git_cmd(cmd):
@@ -244,17 +265,17 @@ def run_git_cmd(cmd):
     return result
 
 
-def publish(publish_dir, url, logfile):
+def publish():
     # Ensure publishing dir is clean
-    status = run_git_cmd(f"git -C {publish_dir} status")
+    status = run_git_cmd(f"git -C {PUBLISH_DIR} status")
     if status[-1] != "nothing to commit, working tree clean":
-        raise RuntimeError(f"publish_dir not clean: {publish_dir}")
+        raise RuntimeError(f"PUBLISH_DIR not clean: {PUBLISH_DIR}")
 
     # Copy to publishing directory
-    destfile = os.path.join(publish_dir, os.path.basename(logfile))
-    shutil.copyfile(logfile, destfile)
+    destfile = os.path.join(PUBLISH_DIR, os.path.basename(LOGFILE))
+    shutil.copyfile(LOGFILE, destfile)
 
-    status = run_git_cmd(f"git -C {publish_dir} status")
+    status = run_git_cmd(f"git -C {PUBLISH_DIR} status")
     modified_files = []
     new_files = []
     in_untracked_files = False
@@ -274,30 +295,30 @@ def publish(publish_dir, url, logfile):
     if new_files:
         print("Adding files:\n   " + "\n   ".join(new_files))
 
-    commit(publish_dir, url, modified_files, new_files)
+    commit(modified_files, new_files)
 
 
-def commit(publish_dir, url, modified_files, new_files):
-    status = run_git_cmd(f"git -C {publish_dir} status")
+def commit(modified_files, new_files):
+    status = run_git_cmd(f"git -C {PUBLISH_DIR} status")
     if status[-1] != "nothing to commit, working tree clean":
         # Stage
         print("Staging...")
-        cmd = f"git -C {publish_dir} add {os.path.join(publish_dir, '*')}"
+        cmd = f"git -C {PUBLISH_DIR} add {os.path.join(PUBLISH_DIR, '*')}"
         status = run_git_cmd(cmd)
 
         # Commit
         print("Committing...")
-        cmd = f"git -C {publish_dir} commit -m Update"
+        cmd = f"git -C {PUBLISH_DIR} commit -m Update"
         status = run_git_cmd(cmd)
 
         # Push
         print("Pushing...")
-        cmd = f"git -C {publish_dir} push"
+        cmd = f"git -C {PUBLISH_DIR} push"
         status = run_git_cmd(cmd)
 
         print("Done! Published to:")
         for f in modified_files + new_files:
-            file_url = url + os.path.basename(f)
+            file_url = PUBLISH_URL + os.path.basename(f)
             print("   " + file_url)
     else:
         print("Nothing to commit")
@@ -323,7 +344,7 @@ def deduplex(ds, suffix, too_many_duplexed, perage_var, var_to_print):
     return da_ap, too_many_duplexed
 
 
-def get_sha(logfile, testset_dir, top_testset_dir, ds):
+def get_sha(testset_dir, top_testset_dir, ds):
     srcroot_git_status_file = os.path.join(top_testset_dir, "SRCROOT_GIT_STATUS")
     this_commit = None
     sha = None
@@ -337,9 +358,9 @@ def get_sha(logfile, testset_dir, top_testset_dir, ds):
             "Current hash", "Current CTSM hash"
         )
         ds.attrs["label"] = ctsm_sha_to_fates(sha)
-        with open(logfile, "a") as f:
+        with open(LOGFILE, "a") as f:
             f.write(f"<h3>{testset_dir}</h3>\n")
-        log_br(logfile, ds.attrs["this_commit"])
+        log_br(ds.attrs["this_commit"])
     except FileNotFoundError:
         ds.attrs["this_commit"] = "unknown"
         ds.attrs["label"] = "unknown"
@@ -348,12 +369,12 @@ def get_sha(logfile, testset_dir, top_testset_dir, ds):
     return ds
 
 
-def get_datasets(testset_dir_list, top_dir, test_name, logfile):
+def get_datasets():
     datasets = []
-    for testset_dir in testset_dir_list:
-        top_testset_dir = os.path.join(top_dir, testset_dir)
+    for testset_dir in TESTSET_DIR_LIST:
+        top_testset_dir = os.path.join(TOP_DIR, testset_dir)
         top_testset_dir = os.path.realpath(top_testset_dir)
-        test_run_dir = os.path.join(top_testset_dir, test_name + "*", "run")
+        test_run_dir = os.path.join(top_testset_dir, TEST_NAME + "*", "run")
         test_run_dir = os.path.join(test_run_dir, "*.clm2.h0.*nc")
 
         file_list = glob.glob(test_run_dir)
@@ -368,7 +389,7 @@ def get_datasets(testset_dir_list, top_dir, test_name, logfile):
             ds = ds.isel(time=-1)
 
         # Get SHA
-        ds = get_sha(logfile, testset_dir, top_testset_dir, ds)
+        ds = get_sha(testset_dir, top_testset_dir, ds)
 
         datasets.append(ds)
     return datasets
@@ -442,15 +463,15 @@ def get_unweighted_sum(suffix, da, da_ap):
     return da_ap_sum
 
 
-def write_front_matter(test_name, logfile, comparing_2, testset_dir_list, THISREPO_URL):
-    with open(logfile, "a") as f:
-        if comparing_2:
-            msg = f"<h1>Comparing NONwtd {testset_dir_list[0]} and {testset_dir_list[1]}</h1>\n"
+def write_front_matter():
+    with open(LOGFILE, "a") as f:
+        if COMPARING_2:
+            msg = f"<h1>Comparing NONwtd {TESTSET_DIR_LIST[0]} and {TESTSET_DIR_LIST[1]}</h1>\n"
         else:
-            msg = f"<h1>{testset_dir_list[0]}</h1>\n"
+            msg = f"<h1>{TESTSET_DIR_LIST[0]}</h1>\n"
         f.write(msg)
-    log_br(logfile, f"Test: {test_name} <br>")
-    with open(logfile, "a") as f:
+    log_br(f"Test: {TEST_NAME} <br>")
+    with open(LOGFILE, "a") as f:
         # pylint: disable=line-too-long
         f.write("<b>How to read these plots</b><br>")
         f.write(
