@@ -23,6 +23,12 @@ from io import BytesIO
 import subprocess
 import rfh_utils
 
+# E.g.:
+#    set8 = "tests_1001-170645de"
+#    set14 = "tests_1008-131302de"
+#    testset_dir_list = [set8, set14]
+from test_sets import *  # pylint: disable=wildcard-import
+
 # What machine are we on?
 from socket import gethostname
 
@@ -57,42 +63,6 @@ my_added_diagnostics_nonperage = [
 
 
 # %% Import
-
-set00 = "tests_0717-152801iz"  # Pure baseline
-set0 = (
-    "tests_0718-095838de"  # Before substantive changes (CTSM 8e7a1d85, FATES ff87ce15)
-)
-set1 = "tests_0718-130915de"  # _AP fixes only
-set2 = "tests_0722-142229de"  # All fixes
-set3 = "tests_0723-141100de"  # 103fdc9 (b4b with above)
-set4 = "tests_0724-101913de"  # a0881c5 (Fix FATES_MORTALITY_CANOPY_SZAP and FATES_MORTALITY_USTORY_SZAP)
-set5 = (
-    "tests_0724-125943de"  # a807670c1 (scag_denominator_area needs to be in patchloop)
-)
-set6 = "tests_0906-171030de"  # Revert my weighting changes (CTSM 6098ae6b1, FATES 91f043a7)
-set7 = "tests_0911-131117de"  # Refactoring and troubleshooting (CTSM c311c24f1, FATES ed7a4e60)
-set8 = "tests_1001-170645de"  # Baseline with extra outputs (CTSM a5e4aab86, FATES 60ec242a47)
-set9 = "tests_1002-110327de"  # After refactoring (CTSM cc43b21db, FATES 46bcd0c9), only roundoff diffs from set8
-set10 = "tests_1002-233952de"  # After fixes to bad per-ageclass vars (CTSM b6b50eb2f, FATES c8b04d41)
-set11 = "tests_1003-115109de"  # Amended version of above
-set12 = "tests_1003-122810de"  # Mortality fixes? (CTSM a695f62ff, FATES 7134803f)
-set13 = "tests_1008-110217de"  # Mortality fixes? (CTSM 1a4f331cd16, FATES c17a4e10)
-set14 = "tests_1008-131302de"  # Remove mortality component outputs (CTSM bf9386b93b, FATES fa87c89c)
-
-# testset_dir_list = [set0, set1]
-# testset_dir_list = [set1, set2]
-# testset_dir_list = [set0, set3]
-# testset_dir_list = [set3, set4]
-# testset_dir_list = [set4, set5]
-# # testset_dir_list = [set0, set5]
-# testset_dir_list = [set0, set6]
-# testset_dir_list = [set00, set7]
-# testset_dir_list = set5
-# testset_dir_list = [set8, set9]
-# testset_dir_list = [set9, set10]
-# testset_dir_list = [set11, set12]
-# testset_dir_list = [set12, set13]
-testset_dir_list = [set8, set14]
 
 top_dir = "/glade/derecho/scratch/samrabin"
 test_name = (
