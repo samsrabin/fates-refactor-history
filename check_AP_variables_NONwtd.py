@@ -22,7 +22,8 @@ TEST_NAME = (
     "SMS_Lm49.f10_f10_mg37.I2000Clm60Fates.derecho_intel.clm-FatesColdAllVarsMonthly"
 )
 PUBLISH_DIR = "/glade/u/home/samrabin/analysis-outputs/fates-refactor-history"
-URL = "https://samsrabin.github.io/analysis-outputs/fates-refactor-history/"
+PUBLISH_URL = "https://samsrabin.github.io/analysis-outputs/fates-refactor-history/"
+THISREPO_URL = "https://github.com/samsrabin/fates-refactor-history"
 
 #############
 ### Setup ###
@@ -42,7 +43,7 @@ comparing_2 = len(testset_dir_list) > 1
 if comparing_2 and len(testset_dir_list) > 2:
     raise RuntimeError("Max # runs to compare is 2")
 
-rfh_utils.write_front_matter(TEST_NAME, logfile, comparing_2, testset_dir_list)
+rfh_utils.write_front_matter(TEST_NAME, logfile, comparing_2, testset_dir_list, THISREPO_URL)
 
 ###############
 ### Process ###
@@ -125,4 +126,4 @@ for perage_var in dict_perage_to_non_equiv:
 rfh_utils.add_end_text(
     logfile, nonperage_missing, too_many_duplexed, missing_var_lists, all_nan, no_boxdata
 )
-rfh_utils.publish(PUBLISH_DIR, URL, logfile)
+rfh_utils.publish(PUBLISH_DIR, PUBLISH_URL, logfile)

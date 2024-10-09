@@ -442,7 +442,7 @@ def get_unweighted_sum(suffix, da, da_ap):
     return da_ap_sum
 
 
-def write_front_matter(test_name, logfile, comparing_2, testset_dir_list):
+def write_front_matter(test_name, logfile, comparing_2, testset_dir_list, THISREPO_URL):
     with open(logfile, "a") as f:
         if comparing_2:
             msg = f"<h1>Comparing NONwtd {testset_dir_list[0]} and {testset_dir_list[1]}</h1>\n"
@@ -461,4 +461,9 @@ def write_front_matter(test_name, logfile, comparing_2, testset_dir_list):
         )
         f.write(
             "Yes, we really want the SUM across the age-class axis to match, even though in most cases what users want of the variable is each age-class's actual value. (If we were saving that, then in order to make the comparison, we would need to take the area-weighted mean across age classes.) We have this behavior because it allows for better preservation of numerical accuracy.<br><br>"
+        )
+        thisrepo_link = f'<a href="{THISREPO_URL}">this repo</a>.'
+        f.write(
+            "This analysis was performed (and this webpage was published) using the code in " +
+            thisrepo_link
         )
