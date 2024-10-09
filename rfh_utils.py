@@ -5,15 +5,26 @@ Useful functions for this module
 # pylint: disable=missing-function-docstring
 # pylint: disable=too-many-arguments
 
+import glob
 import os
 import shutil
 import re
 import base64
 from io import BytesIO
+from socket import gethostname
 import subprocess
 import matplotlib.pyplot as plt
 import numpy as np
+import xarray as xr
 
+# What machine are we on?
+hostname = gethostname()
+if any(x in hostname for x in ["derecho", "casper"]) or "crhtc" in hostname:
+    machine = "glade"
+    # Only possible because I have export PYTHONPATH=$HOME in my .bash_profile
+    from ctsm_python_gallery_myfork.ctsm_py import fates_xarray_funcs as fates_utils
+else:
+    raise NotImplementedError(f"Hostname not recognized: {hostname}")
 
 def log_br(logfile, msg):
     if "img src" not in msg:
@@ -250,3 +261,71 @@ def commit(publish_dir, url, modified_files, new_files):
             print("   " + file_url)
     else:
         print("Nothing to commit")
+
+def deduplex(ds, suffix, too_many_duplexed, perage_var, var_to_print):
+    n_duplexed_dims = len(suffix) / 2
+    if n_duplexed_dims > 2:
+        too_many_duplexed.append(var_to_print)
+        return None, too_many_duplexed
+    if suffix == "APFC":
+        da_ap = fates_utils.agefuel_to_age_by_fuel(perage_var, ds)
+    elif suffix == "APPF":
+        da_ap = fates_utils.deduplex(ds, perage_var, "age", "pft")
+    elif suffix == "SZAP":
+        da_ap = fates_utils.deduplex(ds, perage_var, "scls", "age")
+    elif suffix == "SZAPPF":
+        raise RuntimeError("This requires more testing")
+                # pylint: disable=unreachable
+        da_ap = fates_utils.scappf_to_scls_by_age_by_pft(perage_var, ds)
+    else:
+        raise NotImplementedError(f"Unrecognized suffix: _{suffix}")
+    return da_ap, too_many_duplexed
+
+def get_sha(logfile, testset_dir, top_testset_dir, ds):
+    srcroot_git_status_file = os.path.join(top_testset_dir, "SRCROOT_GIT_STATUS")
+    this_commit = None
+    sha = None
+    pattern = re.compile("^Current hash:.*$")
+    try:
+        for line in open(srcroot_git_status_file):
+            for match in re.finditer(pattern, line):
+                this_commit = match.group()
+                sha = this_commit.split(" ")[2]
+        ds.attrs["this_commit"] = this_commit.replace(
+            "Current hash", "Current CTSM hash"
+        )
+        ds.attrs["label"] = ctsm_sha_to_fates(sha)
+        with open(logfile, "a") as f:
+            f.write(f"<h3>{testset_dir}</h3>\n")
+        log_br(logfile, ds.attrs["this_commit"])
+    except FileNotFoundError:
+        ds.attrs["this_commit"] = "unknown"
+        ds.attrs["label"] = "unknown"
+    except:  # pylint: disable=try-except-raise
+        raise
+    return ds
+
+def get_datasets(testset_dir_list, top_dir, test_name, logfile):
+    datasets = []
+    for testset_dir in testset_dir_list:
+        top_testset_dir = os.path.join(top_dir, testset_dir)
+        top_testset_dir = os.path.realpath(top_testset_dir)
+        test_run_dir = os.path.join(top_testset_dir, test_name + "*", "run")
+        test_run_dir = os.path.join(test_run_dir, "*.clm2.h0.*nc")
+
+        file_list = glob.glob(test_run_dir)
+        if len(file_list) == 0:
+            raise FileNotFoundError(f"No files found matching {test_run_dir}")
+        file_list.sort()
+
+        # Only examine the last timestep, for efficiency
+        this_file = file_list[-1]
+        ds = xr.open_dataset(this_file)
+        if "time" in ds.dims:
+            ds = ds.isel(time=-1)
+
+        # Get SHA
+        ds = get_sha(logfile, testset_dir, top_testset_dir, ds)
+
+        datasets.append(ds)
+    return datasets

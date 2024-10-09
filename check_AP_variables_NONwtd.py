@@ -5,13 +5,11 @@ per-ageclass variables have the issue where their NON-weighted sum doesn't equal
 non-per-ageclass version.
 """
 # pylint: disable=invalid-name
+# pylint: disable=fixme
 
 # %% Setup
-import glob
 import os
 import re
-from socket import gethostname
-import xarray as xr
 import rfh_utils
 
 # E.g.:
@@ -20,14 +18,6 @@ import rfh_utils
 #    testset_dir_list = [set8, set14]
 from test_sets import testset_dir_list
 
-# What machine are we on?
-hostname = gethostname()
-if any(x in hostname for x in ["derecho", "casper"]) or "crhtc" in hostname:
-    machine = "glade"
-    # Only possible because I have export PYTHONPATH=$HOME in my .bash_profile
-    from ctsm_python_gallery_myfork.ctsm_py import fates_xarray_funcs as fates_utils
-else:
-    raise NotImplementedError(f"Hostname not recognized: {hostname}")
 
 # Per-age variables that I added for diagnostic purposes
 my_added_diagnostics = [
@@ -71,7 +61,6 @@ if os.path.exists(logfile):
     os.remove(logfile)
 print(f"Log file: {logfile}")
 
-datasets = []
 comparing_2 = len(testset_dir_list) > 1
 if comparing_2 and len(testset_dir_list) > 2:
     raise RuntimeError("Max # runs to compare is 2")
@@ -97,46 +86,7 @@ with open(logfile, "a") as f:
     )
 
 
-for testset_dir in testset_dir_list:
-    top_testset_dir = os.path.join(top_dir, testset_dir)
-    top_testset_dir = os.path.realpath(top_testset_dir)
-    test_run_dir = os.path.join(top_testset_dir, test_name + "*", "run")
-    test_run_dir = os.path.join(test_run_dir, "*.clm2.h0.*nc")
-
-    file_list = glob.glob(test_run_dir)
-    if len(file_list) == 0:
-        raise FileNotFoundError(f"No files found matching {test_run_dir}")
-    file_list.sort()
-
-    # Only examine the last timestep, for efficiency
-    this_file = file_list[-1]
-    ds = xr.open_dataset(this_file)
-    if "time" in ds.dims:
-        ds = ds.isel(time=-1)
-    datasets.append(ds)
-
-    # Get SHA
-    srcroot_git_status_file = os.path.join(top_testset_dir, "SRCROOT_GIT_STATUS")
-    this_commit = None
-    sha = None
-    pattern = re.compile("^Current hash:.*$")
-    try:
-        for i, line in enumerate(open(srcroot_git_status_file)):
-            for match in re.finditer(pattern, line):
-                this_commit = match.group()
-                sha = this_commit.split(" ")[2]
-        ds.attrs["this_commit"] = this_commit.replace(
-            "Current hash", "Current CTSM hash"
-        )
-        ds.attrs["label"] = rfh_utils.ctsm_sha_to_fates(sha)
-        with open(logfile, "a") as f:
-            f.write(f"<h3>{testset_dir}</h3>\n")
-        rfh_utils.log_br(logfile, ds.attrs["this_commit"])
-    except FileNotFoundError:
-        ds.attrs["this_commit"] = "unknown"
-        ds.attrs["label"] = "unknown"
-    except:  # pylint: disable=try-except-raise
-        raise
+datasets = rfh_utils.get_datasets(testset_dir_list, top_dir, test_name, logfile)
 
 
 # Process
@@ -145,7 +95,9 @@ for testset_dir in testset_dir_list:
 pattern = "FATES_[A-Z_]+_[A-Z]*AP[A-Z]*"
 p = re.compile(pattern)
 dict_perage_to_non_equiv = {}
+ds = datasets[-1]
 var_list = list(ds.variables)
+# TODO: Add comparison of datasets' variable lists
 var_list.sort()
 for this_var in var_list:
     match = p.match(this_var)
@@ -182,6 +134,7 @@ for this_var in var_list:
 nonperage_missing = []
 too_many_duplexed = []
 weights_var_missing = []
+
 for perage_var in dict_perage_to_non_equiv:
     (
         non_perage_equiv,
@@ -220,22 +173,11 @@ for perage_var in dict_perage_to_non_equiv:
 
         # Deduplex, if needed and possible
         if do_deduplex:
-            n_duplexed_dims = len(suffix) / 2
-            if n_duplexed_dims > 2:
-                too_many_duplexed.append(var_to_print)
+            da_ap, too_many_duplexed = rfh_utils.deduplex(
+                ds, suffix, too_many_duplexed, perage_var, var_to_print
+            )
+            if var_to_print in too_many_duplexed:
                 break
-            if suffix == "APFC":
-                da_ap = fates_utils.agefuel_to_age_by_fuel(perage_var, ds)
-            elif suffix == "APPF":
-                da_ap = fates_utils.deduplex(ds, perage_var, "age", "pft")
-            elif suffix == "SZAP":
-                da_ap = fates_utils.deduplex(ds, perage_var, "scls", "age")
-            elif suffix == "SZAPPF":
-                raise RuntimeError("This requires more testing")
-                # pylint: disable=unreachable
-                da_ap = fates_utils.scappf_to_scls_by_age_by_pft(perage_var, ds)
-            else:
-                raise NotImplementedError(f"Unrecognized suffix: _{suffix}")
 
         # Get unweighted sum
         da_ap_sum = da_ap.sum(dim="fates_levage")
