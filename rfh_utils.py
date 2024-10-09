@@ -200,12 +200,17 @@ def get_variable_info(dict_perage_to_non_equiv, perage_var):
     return non_perage_equiv, suffix, this_dict, do_deduplex, var_to_print
 
 
-def add_end_text(logfile, nonperage_missing, too_many_duplexed):
+def add_end_text(logfile, nonperage_missing, too_many_duplexed, missing_var_lists):
     with open(logfile, "a") as f:
         f.write("<hr>\n")
         f.write("<h2>Other</h2>\n")
     log_ul(logfile, "🤷 Non-per-age equivalent not in Dataset", nonperage_missing)
     log_ul(logfile, "🤷 Too many (> 2) duplexed dimensions", too_many_duplexed)
+    for i, missing_var_list in enumerate(missing_var_lists):
+        if missing_var_list:
+            missing_var_list.sort()
+            n_ds = len(missing_var_lists)
+            log_ul(logfile, f"🤷 Missing from Dataset {i+1}/{n_ds}", missing_var_list)
 
 
 def run_git_cmd(cmd):
@@ -354,11 +359,18 @@ def get_dict_perage_to_non_equiv(datasets):
     pattern = "FATES_[A-Z_]+_[A-Z]*AP[A-Z]*"
     p = re.compile(pattern)
     dict_perage_to_non_equiv = {}
-    ds = datasets[-1]
 
-    var_list = list(ds.variables)
-    # TODO: Add comparison of datasets' variable lists
+    # Get variables missing from each dataset
+    all_vars = []
+    for ds in datasets:
+        all_vars += list(ds.variables)
+    unique_vars = np.unique(all_vars)
+    missing_var_lists = []
+    for ds in datasets:
+        missing_var_lists.append([v for v in unique_vars if v not in ds])
 
+    # Loop through variables present on both datasets
+    var_list = [v for v in datasets[0] if v in datasets[1]]
     var_list.sort()
     for this_var in var_list:
         match = p.match(this_var)
@@ -372,7 +384,7 @@ def get_dict_perage_to_non_equiv(datasets):
             non_perage_equiv = "_".join(this_var.split("_")[:-1])
             if suffix2:
                 non_perage_equiv += "_" + suffix2
-        if non_perage_equiv in ds:
+        if all(non_perage_equiv in ds for ds in datasets):
             dict_perage_to_non_equiv[this_var] = {
             "non_perage_equiv": non_perage_equiv,
             "isclose": [],
@@ -391,7 +403,7 @@ def get_dict_perage_to_non_equiv(datasets):
             "non_perage_equiv": None,
         }
 
-    return dict_perage_to_non_equiv
+    return dict_perage_to_non_equiv, missing_var_lists
 
 def get_unweighted_sum(suffix, da, da_ap):
     da_ap_sum = da_ap.sum(dim="fates_levage")

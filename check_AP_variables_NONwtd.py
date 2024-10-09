@@ -51,7 +51,7 @@ rfh_utils.write_front_matter(TEST_NAME, logfile, comparing_2, testset_dir_list)
 datasets = rfh_utils.get_datasets(testset_dir_list, TOP_DIR, TEST_NAME, logfile)
 
 # Get per-ageclass variables and their equivalents
-dict_perage_to_non_equiv = rfh_utils.get_dict_perage_to_non_equiv(datasets)
+dict_perage_to_non_equiv, missing_var_lists = rfh_utils.get_dict_perage_to_non_equiv(datasets)
 
 # Analyze
 nonperage_missing = []
@@ -112,6 +112,6 @@ for perage_var in dict_perage_to_non_equiv:
 #################
 
 rfh_utils.add_end_text(
-    logfile, nonperage_missing, too_many_duplexed
+    logfile, nonperage_missing, too_many_duplexed, missing_var_lists
 )
 rfh_utils.publish(PUBLISH_DIR, URL, logfile)
