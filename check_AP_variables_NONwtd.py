@@ -317,12 +317,6 @@ for perage_var in dict_perage_to_non_equiv.keys():
         if da.dims != da_ap_sum.dims:
             raise RuntimeError(f"Dimensions of da_ap_sum ({da_ap_sum.dims}) don't match those of da ({da.dims})")
 
-        # Get weighted mean
-        # CURRENTLY UNUSED
-        da_ap_wtmean = da_ap.weighted(weights).mean(dim="fates_levage")
-        if da.dims != da_ap_wtmean.dims:
-            raise RuntimeError(f"Dimensions of da_ap_wtmean ({da_ap_wtmean.dims}) don't match those of da ({da.dims})")
-
         # Test
         is_close = np.all(np.isclose(da, da_ap_sum, equal_nan=True))
         this_dict["isclose"].append(is_close)
