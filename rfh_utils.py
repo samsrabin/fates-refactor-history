@@ -65,7 +65,7 @@ if not isinstance(TESTSET_DIR_LIST, list):
     TESTSET_DIR_LIST = [TESTSET_DIR_LIST]
 
 LOGFILE = os.path.join(
-    TOP_DIR, ".".join(["NONwtd"] + TESTSET_DIR_LIST + [TEST_NAME, "html"])
+    PUBLISH_DIR, ".".join(["NONwtd"] + TESTSET_DIR_LIST + [TEST_NAME, "html.tmp"])
 )
 if os.path.exists(LOGFILE):
     os.remove(LOGFILE)
@@ -271,9 +271,9 @@ def publish():
     if status[-1] != "nothing to commit, working tree clean":
         raise RuntimeError(f"PUBLISH_DIR not clean: {PUBLISH_DIR}")
 
-    # Copy to publishing directory
-    destfile = os.path.join(PUBLISH_DIR, os.path.basename(LOGFILE))
-    shutil.copyfile(LOGFILE, destfile)
+    # Rename log file
+    destfile = os.path.join(PUBLISH_DIR, os.path.basename(LOGFILE).replace("html.tmp", "html"))
+    shutil.move(LOGFILE, destfile)
 
     status = run_git_cmd(f"git -C {PUBLISH_DIR} status")
     modified_files = []
