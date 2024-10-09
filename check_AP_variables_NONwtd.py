@@ -133,7 +133,6 @@ for this_var in var_list:
 # Analyze
 nonperage_missing = []
 too_many_duplexed = []
-weights_var_missing = []
 
 for perage_var in dict_perage_to_non_equiv:
     (
@@ -148,28 +147,9 @@ for perage_var in dict_perage_to_non_equiv:
         nonperage_missing.append(var_to_print)
         continue
 
-    # Get age weights
-    weightvar = this_dict["weights"]
-    if weightvar not in datasets[0]:
-        print(f"{perage_var}'s weighting variable ({weightvar}) missing; will skip")
-        weights_var_missing.append(f"{var_to_print} (weights: {weightvar})")
-        continue
-
     for i, ds in enumerate(datasets):
         # Get DataArrays to work with
         da = ds[non_perage_equiv]
-        da_ap = ds[perage_var]
-        weights = ds[weightvar]
-        if weightvar == "FATES_CANOPYAREA_AP" and testset_dir_list[i] not in [
-            "tests_0717-152801iz",
-            "tests_0718-095838de",
-        ]:
-            # Starting with FATES commit 5942a0d (first included in CTSM commit a6ccdf3ec), the
-            # denominator of FATES_CANOPYAREA_AP is age-class area instead of site area. That's
-            # fine for FATES_CANOPYAREA_AP per se, but it means that when you use it as a weight,
-            # you need to multiply it by FATES_PATCHAREA_AP.
-            weights *= ds["FATES_PATCHAREA_AP"]
-        weights = weights.fillna(0)
 
         # Deduplex, if needed and possible
         if do_deduplex:
@@ -178,6 +158,8 @@ for perage_var in dict_perage_to_non_equiv:
             )
             if var_to_print in too_many_duplexed:
                 break
+        else:
+            da_ap = ds[perage_var].copy()
 
         # Get unweighted sum
         da_ap_sum = da_ap.sum(dim="fates_levage")
@@ -215,6 +197,6 @@ for perage_var in dict_perage_to_non_equiv:
 
 # Finish up
 rfh_utils.add_end_text(
-    logfile, nonperage_missing, too_many_duplexed, weights_var_missing
+    logfile, nonperage_missing, too_many_duplexed
 )
 rfh_utils.publish(publish_dir, url, logfile)

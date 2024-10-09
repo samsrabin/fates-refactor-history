@@ -180,13 +180,12 @@ def get_variable_info(dict_perage_to_non_equiv, perage_var):
     return non_perage_equiv, suffix, this_dict, do_deduplex, var_to_print
 
 
-def add_end_text(logfile, nonperage_missing, too_many_duplexed, weights_var_missing):
+def add_end_text(logfile, nonperage_missing, too_many_duplexed):
     with open(logfile, "a") as f:
         f.write("<hr>\n")
         f.write("<h2>Other</h2>\n")
     log_ul(logfile, "🤷 Non-per-age equivalent not in Dataset", nonperage_missing)
     log_ul(logfile, "🤷 Too many (> 2) duplexed dimensions", too_many_duplexed)
-    log_ul(logfile, "🤷 Weights variable missing", weights_var_missing)
 
 
 def run_git_cmd(cmd):
