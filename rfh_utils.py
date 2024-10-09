@@ -27,6 +27,27 @@ if any(x in hostname for x in ["derecho", "casper"]) or "crhtc" in hostname:
 else:
     raise NotImplementedError(f"Hostname not recognized: {hostname}")
 
+# Per-age variables that I added for diagnostic purposes
+MY_ADDED_DIAGNOSTICS = [
+    "FATES_MORTALITY_A_CANOPY_SZAP",
+    "FATES_MORTALITY_A_USTORY_SZAP",
+    "FATES_MORTALITY_B_USTORY_SZAP",
+    "FATES_MORTALITY_C_CANOPY_SZAP",
+    "FATES_MORTALITY_C_USTORY_SZAP",
+    "FATES_MORTALITY_D_CANOPY_SZAP",
+    "FATES_MORTALITY_D_USTORY_SZAP",
+]
+# Non-perage variables that I added for diagnostic purposes
+MY_ADDED_DIAGNOSTICS_NONPERAGE = [
+    "FATES_CANOPYAREA",
+    "FATES_NCL",
+    "FATES_PATCHAREA",
+    "FATES_SCORCH_HEIGHT_PF",
+    "FATES_SECONDAREA_ANTHRODIST",
+    "FATES_SECONDAREA_DIST",
+    "FATES_ZSTAR",
+]
+
 def log_br(logfile, msg):
     if "img src" not in msg:
         print(msg.replace("<p>", ""))
@@ -124,8 +145,6 @@ def compare_results(this_dict, da, da_ap_sum):
 
 
 def add_result_text(
-    my_added_diagnostics,
-    my_added_diagnostics_nonperage,
     logfile,
     comparing_2,
     non_perage_equiv,
@@ -141,9 +160,9 @@ def add_result_text(
     print(f"{emojis} {var_to_print}:")
 
     # Note variables that I added for diagnostic purposes
-    if perage_var in my_added_diagnostics:
+    if perage_var in MY_ADDED_DIAGNOSTICS:
         log_br(logfile, "NOTE: Added by Sam Rabin for diagnostic purposes")
-    if non_perage_equiv in my_added_diagnostics_nonperage:
+    if non_perage_equiv in MY_ADDED_DIAGNOSTICS_NONPERAGE:
         log_br(
             logfile,
             "NOTE: Non-per-age version added by Sam Rabin for diagnostic purposes",
@@ -373,3 +392,38 @@ def get_dict_perage_to_non_equiv(datasets):
         }
 
     return dict_perage_to_non_equiv
+
+def get_unweighted_sum(suffix, da, da_ap):
+    da_ap_sum = da_ap.sum(dim="fates_levage")
+    if suffix == "SZAPPF":
+        raise RuntimeError("This requires more testing")
+            # pylint: disable=unreachable
+        da_ap_sum = da_ap_sum.stack(fates_levscpf=("fates_levscls", "fates_levpft"))
+        da_ap_sum = da_ap_sum.transpose("fates_levscpf", "lat", "lon")
+    if da.dims != da_ap_sum.dims:
+        raise RuntimeError(
+                f"Dimensions of da_ap_sum ({da_ap_sum.dims}) don't match those of da ({da.dims})"
+            )
+
+    return da_ap_sum
+
+def write_front_matter(test_name, logfile, comparing_2, testset_dir_list):
+    with open(logfile, "a") as f:
+        if comparing_2:
+            msg = f"<h1>Comparing NONwtd {testset_dir_list[0]} and {testset_dir_list[1]}</h1>\n"
+        else:
+            msg = f"<h1>{testset_dir_list[0]}</h1>\n"
+        f.write(msg)
+    log_br(logfile, f"Test: {test_name} <br>")
+    with open(logfile, "a") as f:
+        # pylint: disable=line-too-long
+        f.write("<b>How to read these plots</b><br>")
+        f.write(
+        "This webpage compares two runs of the above test, with different code versions noted below. Figures contain one boxplot for each test. The boxplots represent the difference between a per-ageclass variable (e.g., FATES_BURNFRAC_AP)---AFTER summing across the age-class axis---and its non-per-ageclass equivalent (e.g., FATES_BURNFRAC). Each data point in the boxplots represent one member of the non-per-ageclass array in the last saved timestep of the test. So for FATES_BURNFRAC each datapoint is a gridcell, whereas for FATES_VEGC_PF each is a PFT in a gridcell.<br><br>"
+    )
+        f.write(
+        "If a code version is behaving as expected, ideally all data points should be zero. In practice, because of rounding errors, this can't be achieved. Instead, we expect that the data points should be grouped more or less symmetrically around zero, with small (say, < 1e-10) absolute values.<br><br>"
+    )
+        f.write(
+        "Yes, we really want the SUM across the age-class axis to match, even though in most cases what users want of the variable is each age-class's actual value. (If we were saving that, then in order to make the comparison, we would need to take the area-weighted mean across age classes.) We have this behavior because it allows for better preservation of numerical accuracy.<br><br>"
+    )
