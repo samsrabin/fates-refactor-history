@@ -144,7 +144,7 @@ def compare_results(this_dict, da, da_ap_sum):
     this_dict["da_diffs"].append(da_diff)
     this_dict["max_abs_diff"].append(np.nanmax(np.abs(da_diff).values))
     this_dict["max_pct_diff"].append(100 * np.nanmax(np.abs(da_diff / da).values))
-    this_dict["boxdata"].append(da_diff.values[np.where(np.abs(da_diff) > 0)])
+    this_dict["boxdata"].append(da_diff.values[np.where(np.abs(da_diff) >= 0)])
     return this_dict
 
 
