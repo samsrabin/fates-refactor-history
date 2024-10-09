@@ -25,6 +25,7 @@ import rfh_utils
 
 # What machine are we on?
 from socket import gethostname
+
 hostname = gethostname()
 if any(x in hostname for x in ["derecho", "casper"]) or "crhtc" in hostname:
     machine = "glade"
@@ -57,13 +58,17 @@ my_added_diagnostics_nonperage = [
 
 # %% Import
 
-set00 = "tests_0717-152801iz" # Pure baseline
-set0 = "tests_0718-095838de"  # Before substantive changes (CTSM 8e7a1d85, FATES ff87ce15)
+set00 = "tests_0717-152801iz"  # Pure baseline
+set0 = (
+    "tests_0718-095838de"  # Before substantive changes (CTSM 8e7a1d85, FATES ff87ce15)
+)
 set1 = "tests_0718-130915de"  # _AP fixes only
 set2 = "tests_0722-142229de"  # All fixes
 set3 = "tests_0723-141100de"  # 103fdc9 (b4b with above)
 set4 = "tests_0724-101913de"  # a0881c5 (Fix FATES_MORTALITY_CANOPY_SZAP and FATES_MORTALITY_USTORY_SZAP)
-set5 = "tests_0724-125943de"  # a807670c1 (scag_denominator_area needs to be in patchloop)
+set5 = (
+    "tests_0724-125943de"  # a807670c1 (scag_denominator_area needs to be in patchloop)
+)
 set6 = "tests_0906-171030de"  # Revert my weighting changes (CTSM 6098ae6b1, FATES 91f043a7)
 set7 = "tests_0911-131117de"  # Refactoring and troubleshooting (CTSM c311c24f1, FATES ed7a4e60)
 set8 = "tests_1001-170645de"  # Baseline with extra outputs (CTSM a5e4aab86, FATES 60ec242a47)
@@ -90,7 +95,9 @@ set14 = "tests_1008-131302de"  # Remove mortality component outputs (CTSM bf9386
 testset_dir_list = [set8, set14]
 
 top_dir = "/glade/derecho/scratch/samrabin"
-test_name = "SMS_Lm49.f10_f10_mg37.I2000Clm60Fates.derecho_intel.clm-FatesColdAllVarsMonthly"
+test_name = (
+    "SMS_Lm49.f10_f10_mg37.I2000Clm60Fates.derecho_intel.clm-FatesColdAllVarsMonthly"
+)
 
 publish_dir = "/glade/u/home/samrabin/analysis-outputs/fates-refactor-history"
 url = "https://samsrabin.github.io/analysis-outputs/fates-refactor-history/"
@@ -98,7 +105,9 @@ url = "https://samsrabin.github.io/analysis-outputs/fates-refactor-history/"
 if not isinstance(testset_dir_list, list):
     testset_dir_list = [testset_dir_list]
 
-logfile = os.path.join(top_dir, ".".join(["NONwtd"]+ testset_dir_list + [test_name, "html"]))
+logfile = os.path.join(
+    top_dir, ".".join(["NONwtd"] + testset_dir_list + [test_name, "html"])
+)
 if os.path.exists(logfile):
     os.remove(logfile)
 print(f"Log file: {logfile}")
@@ -117,9 +126,15 @@ with open(logfile, "a") as f:
 rfh_utils.log_br(logfile, f"Test: {test_name} <br>")
 with open(logfile, "a") as f:
     f.write("<b>How to read these plots</b><br>")
-    f.write("This webpage compares two runs of the above test, with different code versions noted below. Figures contain one boxplot for each test. The boxplots represent the difference between a per-ageclass variable (e.g., FATES_BURNFRAC_AP)---AFTER summing across the age-class axis---and its non-per-ageclass equivalent (e.g., FATES_BURNFRAC). Each data point in the boxplots represent one member of the non-per-ageclass array in the last saved timestep of the test. So for FATES_BURNFRAC each datapoint is a gridcell, whereas for FATES_VEGC_PF each is a PFT in a gridcell.<br><br>")
-    f.write("If a code version is behaving as expected, ideally all data points should be zero. In practice, because of rounding errors, this can't be achieved. Instead, we expect that the data points should be grouped more or less symmetrically around zero, with small (say, < 1e-10) absolute values.<br><br>")
-    f.write("Yes, we really want the SUM across the age-class axis to match, even though in most cases what users want of the variable is each age-class's actual value. (If we were saving that, then in order to make the comparison, we would need to take the area-weighted mean across age classes.) We have this behavior because it allows for better preservation of numerical accuracy.<br><br>")
+    f.write(
+        "This webpage compares two runs of the above test, with different code versions noted below. Figures contain one boxplot for each test. The boxplots represent the difference between a per-ageclass variable (e.g., FATES_BURNFRAC_AP)---AFTER summing across the age-class axis---and its non-per-ageclass equivalent (e.g., FATES_BURNFRAC). Each data point in the boxplots represent one member of the non-per-ageclass array in the last saved timestep of the test. So for FATES_BURNFRAC each datapoint is a gridcell, whereas for FATES_VEGC_PF each is a PFT in a gridcell.<br><br>"
+    )
+    f.write(
+        "If a code version is behaving as expected, ideally all data points should be zero. In practice, because of rounding errors, this can't be achieved. Instead, we expect that the data points should be grouped more or less symmetrically around zero, with small (say, < 1e-10) absolute values.<br><br>"
+    )
+    f.write(
+        "Yes, we really want the SUM across the age-class axis to match, even though in most cases what users want of the variable is each age-class's actual value. (If we were saving that, then in order to make the comparison, we would need to take the area-weighted mean across age classes.) We have this behavior because it allows for better preservation of numerical accuracy.<br><br>"
+    )
 
 
 for testset_dir in testset_dir_list:
@@ -150,7 +165,9 @@ for testset_dir in testset_dir_list:
             for match in re.finditer(pattern, line):
                 this_commit = match.group()
                 sha = this_commit.split(" ")[2]
-        ds.attrs["this_commit"] = this_commit.replace("Current hash", "Current CTSM hash")
+        ds.attrs["this_commit"] = this_commit.replace(
+            "Current hash", "Current CTSM hash"
+        )
         ds.attrs["label"] = rfh_utils.ctsm_sha_to_fates(sha)
         with open(logfile, "a") as f:
             f.write(f"<h3>{testset_dir}</h3>\n")
@@ -207,9 +224,13 @@ nonperage_missing = []
 too_many_duplexed = []
 weights_var_missing = []
 for perage_var in dict_perage_to_non_equiv.keys():
-    non_perage_equiv, suffix, this_dict, do_deduplex, var_to_print = rfh_utils.get_variable_info(
-        dict_perage_to_non_equiv, perage_var
-    )
+    (
+        non_perage_equiv,
+        suffix,
+        this_dict,
+        do_deduplex,
+        var_to_print,
+    ) = rfh_utils.get_variable_info(dict_perage_to_non_equiv, perage_var)
 
     if non_perage_equiv is None:
         nonperage_missing.append(var_to_print)
@@ -227,7 +248,10 @@ for perage_var in dict_perage_to_non_equiv.keys():
         da = ds[non_perage_equiv]
         da_ap = ds[perage_var]
         weights = ds[weightvar]
-        if weightvar == "FATES_CANOPYAREA_AP" and testset_dir_list[i] not in ["tests_0717-152801iz", "tests_0718-095838de"]:
+        if weightvar == "FATES_CANOPYAREA_AP" and testset_dir_list[i] not in [
+            "tests_0717-152801iz",
+            "tests_0718-095838de",
+        ]:
             # Starting with FATES commit 5942a0d (first included in CTSM commit a6ccdf3ec), the
             # denominator of FATES_CANOPYAREA_AP is age-class area instead of site area. That's
             # fine for FATES_CANOPYAREA_AP per se, but it means that when you use it as a weight,
@@ -258,7 +282,7 @@ for perage_var in dict_perage_to_non_equiv.keys():
         if suffix == "SZAPPF":
             raise RuntimeError("This requires more testing")
             da_ap_sum = da_ap_sum.stack(fates_levscpf=("fates_levscls", "fates_levpft"))
-            da_ap_sum = da_ap_sum.transpose('fates_levscpf', 'lat', 'lon')
+            da_ap_sum = da_ap_sum.transpose("fates_levscpf", "lat", "lon")
         if da.dims != da_ap_sum.dims:
             raise RuntimeError(
                 f"Dimensions of da_ap_sum ({da_ap_sum.dims}) don't match those of da ({da.dims})"
@@ -270,7 +294,16 @@ for perage_var in dict_perage_to_non_equiv.keys():
     if too_many_duplexed and too_many_duplexed[-1] == var_to_print:
         continue
 
-    rfh_utils.add_result_text(my_added_diagnostics, my_added_diagnostics_nonperage, logfile, comparing_2, non_perage_equiv, perage_var, this_dict, var_to_print)
+    rfh_utils.add_result_text(
+        my_added_diagnostics,
+        my_added_diagnostics_nonperage,
+        logfile,
+        comparing_2,
+        non_perage_equiv,
+        perage_var,
+        this_dict,
+        var_to_print,
+    )
 
     # Make boxplots
     rfh_utils.make_boxplots(logfile, datasets, perage_var, this_dict, var_to_print)
@@ -278,5 +311,7 @@ for perage_var in dict_perage_to_non_equiv.keys():
     dict_perage_to_non_equiv[perage_var] = this_dict
 
 # Finish up
-rfh_utils.add_end_text(logfile, nonperage_missing, too_many_duplexed, weights_var_missing)
+rfh_utils.add_end_text(
+    logfile, nonperage_missing, too_many_duplexed, weights_var_missing
+)
 rfh_utils.publish(publish_dir, url, logfile)
