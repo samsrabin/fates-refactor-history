@@ -8,18 +8,16 @@ Useful functions for this module
 
 import glob
 import os
-import shutil
 import re
 import base64
 from io import BytesIO
 from socket import gethostname
-import subprocess
 import matplotlib.pyplot as plt
 import numpy as np
 import xarray as xr
 
 from options import PUBLISH_DIR, TEST_NAME, TESTSET_DIR_LIST
-import options as other_options
+from rfh_git import Rfh_Git
 
 THISREPO_URL = "https://github.com/samsrabin/fates-refactor-history"
 PUBLISH_DIR = os.path.realpath(PUBLISH_DIR)
@@ -71,60 +69,7 @@ COMPARING_2 = N_TESTS > 1
 if COMPARING_2 and N_TESTS > 2:
     raise RuntimeError("Max # runs to compare is 2")
 
-
-def run_git_cmd(git_cmd, cwd=os.getcwd()):
-    try:
-        git_result = subprocess.check_output(
-            git_cmd.split(" "),
-            stderr=subprocess.STDOUT,
-            universal_newlines=True,
-            cwd=cwd,
-        ).splitlines()
-    except subprocess.CalledProcessError as e:
-        print("Command: " + " ".join(e.cmd))
-        print("Working directory: " + cwd)
-        print("Message: ", e.stdout)
-        raise e
-    except:  # pylint: disable=try-except-raise
-        raise
-    return git_result
-
-
-try:
-    PUBLISH_URL = other_options.PUBLISH_URL
-except AttributeError:
-    cmd = "git config --get remote.origin.url"
-    publish_repo_url = run_git_cmd(cmd, cwd=PUBLISH_DIR)[0]
-
-    cmd = "git rev-parse --show-toplevel"
-    publish_dir_repo_top = run_git_cmd(cmd, cwd=PUBLISH_DIR)[0]
-    subdirs = str(os.path.realpath(PUBLISH_DIR)).replace(publish_dir_repo_top, "")
-
-    if "git@github.com:" in publish_repo_url:
-        gh_user = re.compile(r"git@github.com:(\w+)").findall(publish_repo_url)[0]
-        repo_name = re.compile(r"/(.+).git").findall(publish_repo_url)
-        PUBLISH_URL = f"https://{gh_user}.github.io/analysis-outputs" + subdirs + "/"
-    else:
-        raise NotImplementedError(  # pylint: disable=raise-missing-from
-            " ".join(
-                [
-                    f"Not sure how to handle publish_repo_url {publish_repo_url}.",
-                    "Provide PUBLISH_URL in options.py.",
-                ]
-            )
-        )
-except:  # pylint: disable=try-except-raise
-    raise
-
-
-def check_pub_dir_clean():
-    status = run_git_cmd(f"git -C {PUBLISH_DIR} status")
-    if status[-1] != "nothing to commit, working tree clean":
-        raise RuntimeError(f"PUBLISH_DIR not clean: {PUBLISH_DIR}")
-
-
-check_pub_dir_clean()
-
+git = Rfh_Git(PUBLISH_DIR, LOGFILE)
 
 def log_br(msg):
     if "img src" not in msg:
@@ -325,65 +270,6 @@ def add_end_text(
             log_ul(f"🤷 Missing from Dataset {i+1}/{n_ds}", missing_var_list)
 
 
-def publish():
-    # Ensure publishing dir is clean
-    check_pub_dir_clean()
-
-    # Rename log file
-    destfile = os.path.join(
-        PUBLISH_DIR, os.path.basename(LOGFILE).replace("html.tmp", "html")
-    )
-    shutil.move(LOGFILE, destfile)
-
-    status = run_git_cmd(f"git -C {PUBLISH_DIR} status")
-    modified_files = []
-    new_files = []
-    in_untracked_files = False
-    for l in status:
-        if not in_untracked_files:
-            if re.compile("^\tmodified:").match(l):
-                modified_files.append(l.split(" ")[-1])
-            elif l == "Untracked files:":
-                in_untracked_files = True
-        else:
-            if l == "":
-                break
-            if l != '  (use "git add <file>..." to include in what will be committed)':
-                new_files.append(l.replace("\t", ""))
-    if modified_files:
-        print("Updating files:\n   " + "\n   ".join(modified_files))
-    if new_files:
-        print("Adding files:\n   " + "\n   ".join(new_files))
-
-    commit(modified_files, new_files)
-
-
-def commit(modified_files, new_files):
-    status = run_git_cmd(f"git -C {PUBLISH_DIR} status")
-    if status[-1] != "nothing to commit, working tree clean":
-        # Stage
-        print("Staging...")
-        git_cmd = f"git -C {PUBLISH_DIR} add {os.path.join(PUBLISH_DIR, '*')}"
-        status = run_git_cmd(git_cmd)
-
-        # Commit
-        print("Committing...")
-        git_cmd = f"git -C {PUBLISH_DIR} commit -m Update"
-        status = run_git_cmd(git_cmd)
-
-        # Push
-        print("Pushing...")
-        git_cmd = f"git -C {PUBLISH_DIR} push"
-        status = run_git_cmd(git_cmd)
-
-        print("Done! Published to:")
-        for f in modified_files + new_files:
-            file_url = PUBLISH_URL + os.path.basename(f)
-            print("   " + file_url)
-    else:
-        print("Nothing to commit")
-
-
 def deduplex(ds, suffix, too_many_duplexed, perage_var, var_to_print):
     n_duplexed_dims = len(suffix) / 2
     if n_duplexed_dims > 2:
@@ -543,10 +429,13 @@ def write_front_matter():
             "If a code version is behaving as expected, ideally all data points should be zero. In practice, because of rounding errors, this can't usually be achieved. Instead, we expect that the data points should be grouped more or less symmetrically around zero, with small absolute and relative differences. Here, ✅ indicates boxplots with all absolute values of absolute differences < 1e-9 and relative differences < 1e-8. Boxplots that do not meet those criteria are marked with ❌.<br><br>"
         )
         f.write(
-            "Yes, we really want the SUM across the age-class axis to match, even though in most cases what users want of the variable is each age-class's actual value. (If we were saving that, then in order to make the comparison, we would need to take the area-weighted mean across age classes.) We have this behavior because it allows for better preservation of numerical accuracy.<br><br>"
+            "Yes, we really want the SUM across the age-class axis to match, even though in most cases what users want of the variable is each age-class's actual value. (If we were saving that, then in order to make the comparison, we would need to take the area-weighted mean across age classes.) We have this behavior because it allows for better preservation of numerical accuracy. <br><br>"
         )
         thisrepo_link = f'<a href="{THISREPO_URL}">this repo</a>.'
         f.write(
             "This analysis was performed (and this webpage was published) using the code in "
             + thisrepo_link
         )
+
+def publish():
+    git.publish()
