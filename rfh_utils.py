@@ -105,9 +105,9 @@ except AttributeError:
         repo_name = re.compile(r"/(.+).git").findall(publish_repo_url)
         PUBLISH_URL = f"https://{gh_user}.github.io/analysis-outputs" + subdirs + "/"
     else:
-        raise NotImplementedError(
+        raise NotImplementedError(  # pylint: disable=raise-missing-from
             " ".join(
-                [  # pylint: disable=raise-missing-from
+                [
                     f"Not sure how to handle publish_repo_url {publish_repo_url}.",
                     "Provide PUBLISH_URL in options.py.",
                 ]
