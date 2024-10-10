@@ -70,15 +70,17 @@ COMPARING_2 = N_TESTS > 1
 if COMPARING_2 and N_TESTS > 2:
     raise RuntimeError("Max # runs to compare is 2")
 
-def run_git_cmd(git_cmd):
+def run_git_cmd(git_cmd, cwd=os.getcwd()):
     try:
         git_result = subprocess.check_output(
             git_cmd.split(" "),
             stderr=subprocess.STDOUT,
             universal_newlines=True,
+            cwd=cwd,
         ).splitlines()
     except subprocess.CalledProcessError as e:
         print("Command: " + " ".join(e.cmd))
+        print("Working directory: " + cwd)
         print("Message: ", e.stdout)
         raise e
     except:  # pylint: disable=try-except-raise
@@ -89,43 +91,10 @@ try:
     PUBLISH_URL = other_options.PUBLISH_URL
 except AttributeError:
     cmd = "git config --get remote.origin.url"
-    cmd_dir = PUBLISH_DIR
-    try:
-        result = subprocess.run(
-            cmd.split(" "),
-            capture_output=True,
-            check=True,
-            cwd=cmd_dir,
-        )
-    except subprocess.CalledProcessError as e:
-        err_msg = f"Command '{cmd}' in dir '{cmd_dir}' failed with exit status {e.returncode}"
-        stderr = e.stderr.decode()
-        if stderr:
-            err_msg += f": {stderr}"
-        raise ChildProcessError(err_msg) from e
-    except:  # pylint: disable=try-except-raise
-        raise
-    publish_repo_url = result.stdout.decode().replace("\n", "")
-    print(f"publish_repo_url: {publish_repo_url}")
+    publish_repo_url = run_git_cmd(cmd, cwd=PUBLISH_DIR)[0]
 
     cmd = "git rev-parse --show-toplevel"
-    cmd_dir = PUBLISH_DIR
-    try:
-        result = subprocess.run(
-            cmd.split(" "),
-            capture_output=True,
-            check=True,
-            cwd=cmd_dir,
-        )
-    except subprocess.CalledProcessError as e:
-        err_msg = f"Command '{cmd}' in dir '{cmd_dir}' failed with exit status {e.returncode}"
-        stderr = e.stderr.decode()
-        if stderr:
-            err_msg += f": {stderr}"
-        raise ChildProcessError(err_msg) from e
-    except:  # pylint: disable=try-except-raise
-        raise
-    publish_dir_repo_top = result.stdout.decode().replace("\n", "")
+    publish_dir_repo_top = run_git_cmd(cmd, cwd=PUBLISH_DIR)[0]
     subdirs = str(os.path.realpath(PUBLISH_DIR)).replace(publish_dir_repo_top,"")
 
     if "git@github.com:" in publish_repo_url:
