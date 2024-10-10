@@ -81,6 +81,8 @@ def run_git_cmd(git_cmd):
         print("Command: " + " ".join(e.cmd))
         print("Message: ", e.stdout)
         raise e
+    except:  # pylint: disable=try-except-raise
+        raise
     return git_result
 
 try:
