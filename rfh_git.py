@@ -90,9 +90,9 @@ class Rfh_Git:
                 gh_user = re.compile(r"git@github.com:(\w+)").findall(publish_repo_url)[
                     0
                 ]
-                repo_name = re.compile(r"/(.+).git").findall(publish_repo_url)
+                repo_name = re.compile(r"/(.+).git").findall(publish_repo_url)[0]
                 PUBLISH_URL = (
-                    f"https://{gh_user}.github.io/analysis-outputs" + subdirs + "/"
+                    f"https://{gh_user}.github.io/{repo_name}" + subdirs + "/"
                 )
             else:
                 raise NotImplementedError(  # pylint: disable=raise-missing-from
