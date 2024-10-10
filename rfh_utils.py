@@ -140,6 +140,7 @@ def compare_results(this_dict, da, da_ap_sum):
     this_dict["boxdata"].append(da_diff.values[np.where(np.abs(da_diff) >= 0)])
     return this_dict
 
+
 def add_result_text(
     non_perage_equiv,
     perage_var,
@@ -153,6 +154,7 @@ def add_result_text(
         var_to_print,
         COMPARING_2,
     )
+
 
 def get_variable_info(dict_perage_to_non_equiv, perage_var):
     this_dict = dict_perage_to_non_equiv[perage_var]
