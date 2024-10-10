@@ -110,6 +110,12 @@ except AttributeError:
 except:  # pylint: disable=try-except-raise
     raise
 
+def check_pub_dir_clean():
+    status = run_git_cmd(f"git -C {PUBLISH_DIR} status")
+    if status[-1] != "nothing to commit, working tree clean":
+        raise RuntimeError(f"PUBLISH_DIR not clean: {PUBLISH_DIR}")
+check_pub_dir_clean()
+
 def log_br(msg):
     if "img src" not in msg:
         print(msg.replace("<p>", ""))
@@ -313,9 +319,7 @@ def add_end_text(
 
 def publish():
     # Ensure publishing dir is clean
-    status = run_git_cmd(f"git -C {PUBLISH_DIR} status")
-    if status[-1] != "nothing to commit, working tree clean":
-        raise RuntimeError(f"PUBLISH_DIR not clean: {PUBLISH_DIR}")
+    check_pub_dir_clean()
 
     # Rename log file
     destfile = os.path.join(PUBLISH_DIR, os.path.basename(LOGFILE).replace("html.tmp", "html"))
