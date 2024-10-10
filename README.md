@@ -19,8 +19,8 @@ TEST_NAME = (
 
 # The parent directory of each version where that test got saved
 TESTSET_DIR_LIST = [
-    "/glade/derecho/scratch/samrabin/tests_1001-170645de",
-    "/glade/derecho/scratch/samrabin/tests_1008-131302de",
+    "/glade/campaign/cgd/tss/people/samrabin/fates-refactor-history/tests_1001-170645de",
+    "/glade/campaign/cgd/tss/people/samrabin/fates-refactor-history/tests_1008-131302de",
 ]
 
 # Where the HTML file should be saved
