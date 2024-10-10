@@ -23,6 +23,6 @@ TESTSET_DIR_LIST = [
     "/glade/campaign/cgd/tss/people/samrabin/fates-refactor-history/tests_1008-131302de",
 ]
 
-# Where the HTML file should be saved. realpath(PUBLISH_DIR) should be (a directory in) a local copy of a Github repo.
+# Where the HTML file should be saved. realpath(PUBLISH_DIR) should be (a directory in) a local copy of a Github repo. As an example repo, see https://github.com/samsrabin/analysis-outputs.
 PUBLISH_DIR = "/glade/campaign/cgd/tss/people/samrabin/fates-refactor-history/outputs"
 ```
