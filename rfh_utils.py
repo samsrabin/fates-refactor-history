@@ -22,6 +22,7 @@ from options import PUBLISH_DIR, TEST_NAME, TESTSET_DIR_LIST
 import options as other_options
 
 THISREPO_URL = "https://github.com/samsrabin/fates-refactor-history"
+PUBLISH_DIR = os.path.realpath(PUBLISH_DIR)
 
 # What machine are we on?
 hostname = gethostname()
@@ -163,7 +164,7 @@ def log_plot():
     buf.close()
 
 
-def ctsm_sha_to_fates(ctsm_sha):
+def ctsm_sha_to_fates(ctsm_sha, srcroot_git_status_file):
     if ctsm_sha == "8e7a1d85f":
         sha = "fates-ff87ce15"
     elif ctsm_sha == "a6ccdf3ec":
@@ -177,8 +178,34 @@ def ctsm_sha_to_fates(ctsm_sha):
     elif ctsm_sha == "a807670c1":
         sha = "fates-f21fa95b"
     else:
+        sha = fates_sha_from_git_status_file(ctsm_sha, srcroot_git_status_file)
+    return sha
+
+
+def fates_sha_from_git_status_file(ctsm_sha, srcroot_git_status_file):
+    try:
+        pattern = re.compile(".*    fates .*")
+        match = None
+        for line in open(srcroot_git_status_file):
+            matches = pattern.match(line)
+            if matches:
+                match = matches[0]
+                break
+        if match is None:
+            raise EOFError(f"FATES line not found in {srcroot_git_status_file}")
+        if "is out of sync with .gitmodules" in match:
+            x = 3
+        else:
+            x = -1
+        sha = re.split(r"\s+", match)[x]
+        if len(sha) > 8:
+            sha = sha[:8]
+        sha = "fates-" + sha
+    except (FileNotFoundError, EOFError):
         print(f"Unable to get FATES SHA for CTSM SHA {ctsm_sha}")
         sha = "ctsm-" + ctsm_sha
+    except:  # pylint: disable=try-except-raise
+        raise
     return sha
 
 
@@ -406,7 +433,7 @@ def get_sha(testset_dir, top_testset_dir, ds):
         ds.attrs["this_commit"] = this_commit.replace(
             "Current hash", "Current CTSM hash"
         )
-        ds.attrs["label"] = ctsm_sha_to_fates(sha)
+        ds.attrs["label"] = ctsm_sha_to_fates(sha, srcroot_git_status_file)
         with open(LOGFILE, "a") as f:
             f.write(f"<h3>{testset_dir}</h3>\n")
         log_br(ds.attrs["this_commit"])

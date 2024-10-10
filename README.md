@@ -24,5 +24,5 @@ TESTSET_DIR_LIST = [
 ]
 
 # Where the HTML file should be saved
-PUBLISH_DIR = "/glade/u/home/samrabin/analysis-outputs/fates-refactor-history"
+PUBLISH_DIR = "/glade/campaign/cgd/tss/people/samrabin/fates-refactor-history/outputs"
 ```
