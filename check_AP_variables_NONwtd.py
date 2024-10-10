@@ -9,12 +9,6 @@ non-per-ageclass version.
 import numpy as np
 import rfh_utils
 
-#############
-### Setup ###
-#############
-
-rfh_utils.write_front_matter()
-
 ###############
 ### Process ###
 ###############

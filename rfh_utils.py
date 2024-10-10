@@ -9,8 +9,6 @@ Useful functions for this module
 import glob
 import os
 import re
-import base64
-from io import BytesIO
 from socket import gethostname
 import matplotlib.pyplot as plt
 import numpy as np
@@ -18,6 +16,7 @@ import xarray as xr
 
 from options import PUBLISH_DIR, TEST_NAME, TESTSET_DIR_LIST
 from rfh_git import Rfh_Git
+from rfh_write import Rfh_Write
 
 THISREPO_URL = "https://github.com/samsrabin/fates-refactor-history"
 PUBLISH_DIR = os.path.realpath(PUBLISH_DIR)
@@ -30,27 +29,6 @@ if any(x in hostname for x in ["derecho", "casper"]) or "crhtc" in hostname:
     from ctsm_python_gallery_myfork.ctsm_py import fates_xarray_funcs as fates_utils
 else:
     raise NotImplementedError(f"Hostname not recognized: {hostname}")
-
-# Per-age variables that I added for diagnostic purposes
-MY_ADDED_DIAGNOSTICS = [
-    "FATES_MORTALITY_A_CANOPY_SZAP",
-    "FATES_MORTALITY_A_USTORY_SZAP",
-    "FATES_MORTALITY_B_USTORY_SZAP",
-    "FATES_MORTALITY_C_CANOPY_SZAP",
-    "FATES_MORTALITY_C_USTORY_SZAP",
-    "FATES_MORTALITY_D_CANOPY_SZAP",
-    "FATES_MORTALITY_D_USTORY_SZAP",
-]
-# Non-perage variables that I added for diagnostic purposes
-MY_ADDED_DIAGNOSTICS_NONPERAGE = [
-    "FATES_CANOPYAREA",
-    "FATES_NCL",
-    "FATES_PATCHAREA",
-    "FATES_SCORCH_HEIGHT_PF",
-    "FATES_SECONDAREA_ANTHRODIST",
-    "FATES_SECONDAREA_DIST",
-    "FATES_ZSTAR",
-]
 
 if not isinstance(TESTSET_DIR_LIST, list):
     TESTSET_DIR_LIST = [TESTSET_DIR_LIST]
@@ -70,43 +48,8 @@ if COMPARING_2 and N_TESTS > 2:
     raise RuntimeError("Max # runs to compare is 2")
 
 git = Rfh_Git(PUBLISH_DIR, LOGFILE)
-
-def log_br(msg):
-    if "img src" not in msg:
-        print(msg.replace("<p>", ""))
-
-    msg += "<br>\n"
-    with open(LOGFILE, "a") as f:
-        f.write(msg)
-
-
-def log_ul(title, items):
-    if not items:
-        return
-
-    print("\n     ".join([f"\n{title}"] + items))
-
-    with open(LOGFILE, "a") as f:
-        f.write("<p>\n")
-        f.write(f"{title}:<br>\n")
-        f.write("<ul>\n")
-        for i in items:
-            f.write(f"<li>{i}</li>\n")
-        f.write("</ul>\n")
-
-
-def log_plot():
-    # Convert plot to base64 string
-    buf = BytesIO()
-    plt.gcf().savefig(buf, format="png")
-    buf.seek(0)
-    plot_data = base64.b64encode(buf.read()).decode("utf8")
-    plt.close()
-
-    # Embed plot in HTML log message
-    plot_html = '<p><img src="data:image/png;base64,{}">'.format(plot_data)
-    log_br(plot_html)
-    buf.close()
+write = Rfh_Write(LOGFILE, TESTSET_DIR_BASENAME_LIST, THISREPO_URL)
+write.write_front_matter(TEST_NAME, COMPARING_2)
 
 
 def ctsm_sha_to_fates(ctsm_sha, srcroot_git_status_file):
@@ -178,7 +121,7 @@ def make_boxplots(datasets, perage_var, this_dict, var_to_print):
         raise
     plt.ylabel(f"discrepancy ({datasets[0][perage_var].attrs['units']})")
     plt.title(var_to_print)
-    log_plot()
+    write.log_plot()
 
 
 def compare_results(this_dict, da, da_ap_sum):
@@ -197,43 +140,19 @@ def compare_results(this_dict, da, da_ap_sum):
     this_dict["boxdata"].append(da_diff.values[np.where(np.abs(da_diff) >= 0)])
     return this_dict
 
-
 def add_result_text(
     non_perage_equiv,
     perage_var,
     this_dict,
     var_to_print,
 ):
-    emojis = " → ".join(this_dict["isclose_emoji"])
-
-    with open(LOGFILE, "a") as f:
-        f.write("<hr>\n")
-        f.write(f"<h2>{emojis} {var_to_print}</h2>\n")
-    print(f"{emojis} {var_to_print}:")
-
-    # Note variables that I added for diagnostic purposes
-    if perage_var in MY_ADDED_DIAGNOSTICS:
-        log_br("NOTE: Added by Sam Rabin for diagnostic purposes")
-    if non_perage_equiv in MY_ADDED_DIAGNOSTICS_NONPERAGE:
-        log_br(
-            "NOTE: Non-per-age version added by Sam Rabin for diagnostic purposes",
-        )
-
-    max_abs_diff = this_dict["max_abs_diff"]
-    max_pct_diff = this_dict["max_pct_diff"]
-    if not COMPARING_2 or (
-        max_abs_diff[0] == max_abs_diff[1] and max_pct_diff[0] == max_pct_diff[1]
-    ):
-        log_br(f"     max abs diff = {max_abs_diff[0]:.3g}")
-        log_br(f"     max rel diff = {max_pct_diff[0]:.1f}%")
-    else:
-        log_br(
-            f"     max abs diff = {max_abs_diff[0]:.3g} → {max_abs_diff[1]:.3g}",
-        )
-        log_br(
-            f"     max rel diff = {max_pct_diff[0]:.1f}% → {max_pct_diff[1]:.1f}%",
-        )
-
+    write.add_result_text(
+        non_perage_equiv,
+        perage_var,
+        this_dict,
+        var_to_print,
+        COMPARING_2,
+    )
 
 def get_variable_info(dict_perage_to_non_equiv, perage_var):
     this_dict = dict_perage_to_non_equiv[perage_var]
@@ -259,15 +178,15 @@ def add_end_text(
     with open(LOGFILE, "a") as f:
         f.write("<hr>\n")
         f.write("<h2>Other</h2>\n")
-    log_ul("🤷 Non-per-age equivalent not in Dataset", nonperage_missing)
-    log_ul("🤷 Too many (> 2) duplexed dimensions", too_many_duplexed)
-    log_ul("🤷 All data NaN", all_nan)
-    log_ul("🤷 No included data", no_boxdata)
+    write.log_ul("🤷 Non-per-age equivalent not in Dataset", nonperage_missing)
+    write.log_ul("🤷 Too many (> 2) duplexed dimensions", too_many_duplexed)
+    write.log_ul("🤷 All data NaN", all_nan)
+    write.log_ul("🤷 No included data", no_boxdata)
     for i, missing_var_list in enumerate(missing_var_lists):
         if missing_var_list:
             missing_var_list.sort()
             n_ds = len(missing_var_lists)
-            log_ul(f"🤷 Missing from Dataset {i+1}/{n_ds}", missing_var_list)
+            write.log_ul(f"🤷 Missing from Dataset {i+1}/{n_ds}", missing_var_list)
 
 
 def deduplex(ds, suffix, too_many_duplexed, perage_var, var_to_print):
@@ -306,7 +225,7 @@ def get_sha(testset_dir, top_testset_dir, ds):
         ds.attrs["label"] = ctsm_sha_to_fates(sha, srcroot_git_status_file)
         with open(LOGFILE, "a") as f:
             f.write(f"<h3>{testset_dir}</h3>\n")
-        log_br(ds.attrs["this_commit"])
+        write.log_br(ds.attrs["this_commit"])
     except FileNotFoundError:
         ds.attrs["this_commit"] = "unknown"
         ds.attrs["label"] = "unknown"
@@ -408,34 +327,6 @@ def get_unweighted_sum(suffix, da, da_ap):
 
     return da_ap_sum
 
-
-def write_front_matter():
-    with open(LOGFILE, "a") as f:
-        a = TESTSET_DIR_BASENAME_LIST[0]
-        if COMPARING_2:
-            b = TESTSET_DIR_BASENAME_LIST[1]
-            msg = f"<h1>Comparing NONwtd {a} and {b}</h1>\n"
-        else:
-            msg = f"<h1>{a}</h1>\n"
-        f.write(msg)
-    log_br(f"Test: {TEST_NAME} <br>")
-    with open(LOGFILE, "a") as f:
-        # pylint: disable=line-too-long
-        f.write("<b>How to read these plots</b><br>")
-        f.write(
-            "This webpage compares two runs of the above test, with different code versions noted below. Figures contain one boxplot for each test. The boxplots represent the difference between a per-ageclass variable (e.g., FATES_BURNFRAC_AP)---AFTER summing across the age-class axis---and its non-per-ageclass equivalent (e.g., FATES_BURNFRAC). Each data point in the boxplots represent one member of the non-per-ageclass array in the last saved timestep of the test. So for FATES_BURNFRAC each datapoint is a gridcell, whereas for FATES_VEGC_PF each is a PFT in a gridcell.<br><br>"
-        )
-        f.write(
-            "If a code version is behaving as expected, ideally all data points should be zero. In practice, because of rounding errors, this can't usually be achieved. Instead, we expect that the data points should be grouped more or less symmetrically around zero, with small absolute and relative differences. Here, ✅ indicates boxplots with all absolute values of absolute differences < 1e-9 and relative differences < 1e-8. Boxplots that do not meet those criteria are marked with ❌.<br><br>"
-        )
-        f.write(
-            "Yes, we really want the SUM across the age-class axis to match, even though in most cases what users want of the variable is each age-class's actual value. (If we were saving that, then in order to make the comparison, we would need to take the area-weighted mean across age classes.) We have this behavior because it allows for better preservation of numerical accuracy. <br><br>"
-        )
-        thisrepo_link = f'<a href="{THISREPO_URL}">this repo</a>.'
-        f.write(
-            "This analysis was performed (and this webpage was published) using the code in "
-            + thisrepo_link
-        )
 
 def publish():
     git.publish()
