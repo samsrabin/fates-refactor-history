@@ -59,7 +59,8 @@ if not isinstance(TESTSET_DIR_LIST, list):
 TESTSET_DIR_BASENAME_LIST = [os.path.basename(x) for x in TESTSET_DIR_LIST]
 
 LOGFILE = os.path.join(
-    PUBLISH_DIR, ".".join(["NONwtd"] + TESTSET_DIR_BASENAME_LIST + [TEST_NAME, "html.tmp"])
+    PUBLISH_DIR,
+    ".".join(["NONwtd"] + TESTSET_DIR_BASENAME_LIST + [TEST_NAME, "html.tmp"]),
 )
 if os.path.exists(LOGFILE):
     os.remove(LOGFILE)
@@ -69,6 +70,7 @@ N_TESTS = len(TESTSET_DIR_LIST)
 COMPARING_2 = N_TESTS > 1
 if COMPARING_2 and N_TESTS > 2:
     raise RuntimeError("Max # runs to compare is 2")
+
 
 def run_git_cmd(git_cmd, cwd=os.getcwd()):
     try:
@@ -87,6 +89,7 @@ def run_git_cmd(git_cmd, cwd=os.getcwd()):
         raise
     return git_result
 
+
 try:
     PUBLISH_URL = other_options.PUBLISH_URL
 except AttributeError:
@@ -95,26 +98,33 @@ except AttributeError:
 
     cmd = "git rev-parse --show-toplevel"
     publish_dir_repo_top = run_git_cmd(cmd, cwd=PUBLISH_DIR)[0]
-    subdirs = str(os.path.realpath(PUBLISH_DIR)).replace(publish_dir_repo_top,"")
+    subdirs = str(os.path.realpath(PUBLISH_DIR)).replace(publish_dir_repo_top, "")
 
     if "git@github.com:" in publish_repo_url:
         gh_user = re.compile(r"git@github.com:(\w+)").findall(publish_repo_url)[0]
         repo_name = re.compile(r"/(.+).git").findall(publish_repo_url)
-        PUBLISH_URL = (
-            f"https://{gh_user}.github.io/analysis-outputs" + subdirs + "/"
-        )
+        PUBLISH_URL = f"https://{gh_user}.github.io/analysis-outputs" + subdirs + "/"
     else:
-        raise NotImplementedError(" ".join([  # pylint: disable=raise-missing-from
-            f"Not sure how to handle publish_repo_url {publish_repo_url}.",
-            "Provide PUBLISH_URL in options.py."]))
+        raise NotImplementedError(
+            " ".join(
+                [  # pylint: disable=raise-missing-from
+                    f"Not sure how to handle publish_repo_url {publish_repo_url}.",
+                    "Provide PUBLISH_URL in options.py.",
+                ]
+            )
+        )
 except:  # pylint: disable=try-except-raise
     raise
+
 
 def check_pub_dir_clean():
     status = run_git_cmd(f"git -C {PUBLISH_DIR} status")
     if status[-1] != "nothing to commit, working tree clean":
         raise RuntimeError(f"PUBLISH_DIR not clean: {PUBLISH_DIR}")
+
+
 check_pub_dir_clean()
+
 
 def log_br(msg):
     if "img src" not in msg:
@@ -216,9 +226,7 @@ def make_boxplots(datasets, perage_var, this_dict, var_to_print):
         labels.append(f"{label} {emoji}")
     try:
         # pylint: disable=unexpected-keyword-arg
-        plt.boxplot(
-            boxdatas, tick_labels=labels
-        )
+        plt.boxplot(boxdatas, tick_labels=labels)
     except TypeError:
         plt.boxplot(boxdatas, labels=labels)
     except:  # pylint: disable=try-except-raise
@@ -322,7 +330,9 @@ def publish():
     check_pub_dir_clean()
 
     # Rename log file
-    destfile = os.path.join(PUBLISH_DIR, os.path.basename(LOGFILE).replace("html.tmp", "html"))
+    destfile = os.path.join(
+        PUBLISH_DIR, os.path.basename(LOGFILE).replace("html.tmp", "html")
+    )
     shutil.move(LOGFILE, destfile)
 
     status = run_git_cmd(f"git -C {PUBLISH_DIR} status")
@@ -537,6 +547,6 @@ def write_front_matter():
         )
         thisrepo_link = f'<a href="{THISREPO_URL}">this repo</a>.'
         f.write(
-            "This analysis was performed (and this webpage was published) using the code in " +
-            thisrepo_link
+            "This analysis was performed (and this webpage was published) using the code in "
+            + thisrepo_link
         )

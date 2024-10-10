@@ -23,7 +23,9 @@ rfh_utils.write_front_matter()
 datasets = rfh_utils.get_datasets()
 
 # Get per-ageclass variables and their equivalents
-dict_perage_to_non_equiv, missing_var_lists = rfh_utils.get_dict_perage_to_non_equiv(datasets)
+dict_perage_to_non_equiv, missing_var_lists = rfh_utils.get_dict_perage_to_non_equiv(
+    datasets
+)
 
 # Analyze
 nonperage_missing = []
