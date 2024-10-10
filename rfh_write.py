@@ -39,6 +39,27 @@ class Rfh_Write:
         self.testset_dir_basename_list = testset_dir_basename_list
         self.thisrepo_url = thisrepo_url
 
+    def add_end_text(
+        self,
+        nonperage_missing,
+        too_many_duplexed,
+        missing_var_lists,
+        all_nan,
+        no_boxdata,
+    ):
+        with open(self.logfile, "a") as f:
+            f.write("<hr>\n")
+            f.write("<h2>Other</h2>\n")
+        self.log_ul("🤷 Non-per-age equivalent not in Dataset", nonperage_missing)
+        self.log_ul("🤷 Too many (> 2) duplexed dimensions", too_many_duplexed)
+        self.log_ul("🤷 All data NaN", all_nan)
+        self.log_ul("🤷 No included data", no_boxdata)
+        for i, missing_var_list in enumerate(missing_var_lists):
+            if missing_var_list:
+                missing_var_list.sort()
+                n_ds = len(missing_var_lists)
+                self.log_ul(f"🤷 Missing from Dataset {i+1}/{n_ds}", missing_var_list)
+
     def add_result_text(
         self,
         non_perage_equiv,

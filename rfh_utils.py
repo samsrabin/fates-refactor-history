@@ -177,18 +177,13 @@ def add_end_text(
     all_nan,
     no_boxdata,
 ):
-    with open(LOGFILE, "a") as f:
-        f.write("<hr>\n")
-        f.write("<h2>Other</h2>\n")
-    write.log_ul("🤷 Non-per-age equivalent not in Dataset", nonperage_missing)
-    write.log_ul("🤷 Too many (> 2) duplexed dimensions", too_many_duplexed)
-    write.log_ul("🤷 All data NaN", all_nan)
-    write.log_ul("🤷 No included data", no_boxdata)
-    for i, missing_var_list in enumerate(missing_var_lists):
-        if missing_var_list:
-            missing_var_list.sort()
-            n_ds = len(missing_var_lists)
-            write.log_ul(f"🤷 Missing from Dataset {i+1}/{n_ds}", missing_var_list)
+    write.add_end_text(
+        nonperage_missing,
+        too_many_duplexed,
+        missing_var_lists,
+        all_nan,
+        no_boxdata,
+        )
 
 
 def deduplex(ds, suffix, too_many_duplexed, perage_var, var_to_print):
