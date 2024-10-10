@@ -70,6 +70,19 @@ COMPARING_2 = N_TESTS > 1
 if COMPARING_2 and N_TESTS > 2:
     raise RuntimeError("Max # runs to compare is 2")
 
+def run_git_cmd(git_cmd):
+    try:
+        git_result = subprocess.check_output(
+            git_cmd.split(" "),
+            stderr=subprocess.STDOUT,
+            universal_newlines=True,
+        ).splitlines()
+    except subprocess.CalledProcessError as e:
+        print("Command: " + " ".join(e.cmd))
+        print("Message: ", e.stdout)
+        raise e
+    return git_result
+
 try:
     PUBLISH_URL = other_options.PUBLISH_URL
 except AttributeError:
@@ -325,20 +338,6 @@ def add_end_text(
             missing_var_list.sort()
             n_ds = len(missing_var_lists)
             log_ul(f"🤷 Missing from Dataset {i+1}/{n_ds}", missing_var_list)
-
-
-def run_git_cmd(git_cmd):
-    try:
-        git_result = subprocess.check_output(
-            git_cmd.split(" "),
-            stderr=subprocess.STDOUT,
-            universal_newlines=True,
-        ).splitlines()
-    except subprocess.CalledProcessError as e:
-        print("Command: " + " ".join(e.cmd))
-        print("Message: ", e.stdout)
-        raise e
-    return git_result
 
 
 def publish():
